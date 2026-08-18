@@ -1,20 +1,13 @@
-import { requireSession } from "@/lib/auth";
 import { getBoard, updateBoard } from "@/lib/blob/repository";
 import { BoardEventSchema } from "@/lib/blob/schemas";
 
 export async function GET(_request: Request, context: RouteContext<"/api/aste/[id]/board">) {
-  if (!(await requireSession())) {
-    return Response.json({ error: "Non autenticato" }, { status: 401 });
-  }
   const { id } = await context.params;
   const board = await getBoard(id);
   return Response.json(board?.data ?? { astaId: id, events: [] });
 }
 
 export async function POST(request: Request, context: RouteContext<"/api/aste/[id]/board">) {
-  if (!(await requireSession())) {
-    return Response.json({ error: "Non autenticato" }, { status: 401 });
-  }
   const { id } = await context.params;
 
   const body = await request.json();

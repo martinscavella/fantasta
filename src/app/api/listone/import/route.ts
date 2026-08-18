@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { requireSession } from "@/lib/auth";
 import {
   getListoneIndex,
   getListone,
@@ -85,10 +84,6 @@ async function diffVsVersioneCorrente(stagione: string, giocatori: Player[]) {
 }
 
 export async function POST(request: Request) {
-  if (!(await requireSession())) {
-    return Response.json({ error: "Non autenticato" }, { status: 401 });
-  }
-
   const parsed = await parseRequest(request);
   if ("error" in parsed) {
     return Response.json({ error: parsed.error }, { status: 400 });

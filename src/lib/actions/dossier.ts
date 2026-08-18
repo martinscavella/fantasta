@@ -1,6 +1,5 @@
 "use server";
 
-import { requireSession } from "@/lib/auth";
 import { updateDossier } from "@/lib/blob/repository";
 import type { DossierBloccoGenerato } from "@/lib/ai/schemas";
 
@@ -17,8 +16,6 @@ export async function salvaBloccoDossier(
   blockIdAtteso: string,
   generato: DossierBloccoGenerato,
 ): Promise<SalvaBloccoDossierResult> {
-  if (!(await requireSession())) return { ok: false, error: "Sessione scaduta, ricarica la pagina" };
-
   if (generato.blockId !== blockIdAtteso) {
     return {
       ok: false,

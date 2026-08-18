@@ -1,5 +1,4 @@
-import { notFound, redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
+import { notFound } from "next/navigation";
 import { getListone, getSetup, getStrategy } from "@/lib/blob/repository";
 import { FASCE_STANDARD } from "@/lib/pricing";
 import { applicaTemplate } from "@/lib/strategia/template";
@@ -7,8 +6,6 @@ import { StrategiaClient } from "@/components/strategia/strategia-client";
 import type { StrategyDoc } from "@/lib/blob/schemas";
 
 export default async function StrategiaPage({ params }: PageProps<"/strategia/[id]">) {
-  if (!(await requireSession())) redirect("/login");
-
   const { id } = await params;
   const setup = await getSetup(id);
   if (!setup) notFound();

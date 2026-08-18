@@ -1,11 +1,7 @@
-import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
 import { getDossier, getListone, getListoneIndex } from "@/lib/blob/repository";
 import { DossierClient } from "@/components/impostazioni/dossier-client";
 
 export default async function DossierPage({ searchParams }: PageProps<"/impostazioni/dossier">) {
-  if (!(await requireSession())) redirect("/login");
-
   const { stagione } = await searchParams;
 
   if (!stagione) {

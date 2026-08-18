@@ -1,5 +1,4 @@
-import { notFound, redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
+import { notFound } from "next/navigation";
 import { getBoard, getDebrief, getListone, getSetup, getStrategy } from "@/lib/blob/repository";
 import { reduceBoard } from "@/lib/asta/reducer";
 import { costruisciRose, derivaSquadre } from "@/lib/asta/derive";
@@ -7,8 +6,6 @@ import { RiepilogoClient } from "@/components/riepilogo/riepilogo-client";
 import type { Ruolo } from "@/lib/blob/schemas";
 
 export default async function RiepilogoPage({ params }: PageProps<"/riepilogo/[id]">) {
-  if (!(await requireSession())) redirect("/login");
-
   const { id } = await params;
   const setup = await getSetup(id);
   if (!setup) notFound();

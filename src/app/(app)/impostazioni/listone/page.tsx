@@ -1,11 +1,7 @@
-import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
 import { getListoneIndex } from "@/lib/blob/repository";
 import { ImportListoneClient } from "@/components/impostazioni/import-listone-client";
 
 export default async function ImportListonePage({ searchParams }: PageProps<"/impostazioni/listone">) {
-  if (!(await requireSession())) redirect("/login");
-
   const { stagione } = await searchParams;
 
   if (!stagione) {

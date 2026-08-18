@@ -1,11 +1,8 @@
-import { notFound, redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
+import { notFound } from "next/navigation";
 import { getBoard, getListone, getSetup, getStrategy } from "@/lib/blob/repository";
 import { AstaClient } from "@/components/asta/asta-client";
 
 export default async function AstaPage({ params }: PageProps<"/asta/[id]">) {
-  if (!(await requireSession())) redirect("/login");
-
   const { id } = await params;
   const setup = await getSetup(id);
   if (!setup) notFound();

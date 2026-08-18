@@ -2,16 +2,12 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
 import { getListoneIndex, putSetup, updateAsteIndex } from "@/lib/blob/repository";
 import { SetupDocSchema } from "@/lib/blob/schemas";
 
 export type CreaAstaState = { error?: string } | undefined;
 
 export async function creaAsta(_prevState: CreaAstaState, formData: FormData): Promise<CreaAstaState> {
-  // Le Server Function non passano dal proxy: vanno riverificate qui (vedi piano).
-  if (!(await requireSession())) return { error: "Sessione scaduta, ricarica la pagina" };
-
   const nome = String(formData.get("nome") ?? "").trim();
   const stagione = String(formData.get("stagione") ?? "").trim();
   const creditiBase = Number(formData.get("creditiBase"));

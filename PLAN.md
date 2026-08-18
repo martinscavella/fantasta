@@ -44,7 +44,7 @@ Riuso quasi integrale delle convenzioni di `Desktop/diez-crm`, che è già su qu
 
 ### Gotcha da rispettare (già noti dal progetto esistente)
 
-- Middleware Next 16 = `src/proxy.ts` con `export function proxy()`, **non** `middleware.ts`
+- Middleware Next 16 = `src/proxy.ts` con `export function proxy()`, **non** `middleware.ts` (al momento il progetto non ne ha uno: vedi § Autenticazione)
 - `params`/`searchParams` delle pagine sono **Promise** → `await params`; `cookies()` è async
 - shadcn su Base UI: composizione con `render={<Link …/>}` **non** `asChild`; `Select.onValueChange` passa `(value: string | null)`; size bottoni includono `icon-sm`/`xs`. **Verificare sempre la firma reale in `src/components/ui/*.tsx` prima di scrivere UI**
 - ESLint `react-hooks/set-state-in-effect` vieta `setState` sincrono negli effect → caricare dati negli event handler
@@ -59,7 +59,7 @@ Vercel Blob è object storage, non un database: niente query, niente transazioni
 
 ### 1. Store privato + letture consistenti
 
-I documenti di strategia sono l'asset competitivo: non devono essere leggibili da chi indovina un URL. Store creato con `--access private`; ogni lettura passa da una Route Handler che verifica l'auth **accanto alla chiamata `get()`** (non nel middleware — la doc Vercel lo sconsiglia esplicitamente).
+I documenti di strategia sono l'asset competitivo: non devono essere leggibili da chi indovina un URL. Store creato con `--access private`, così i blob non si raggiungono direttamente. Attenzione però: l'app che li serve non ha autenticazione (vedi § Autenticazione), quindi la riservatezza si regge solo sul fatto che l'URL del deploy non sia noto.
 
 Per i documenti mutabili (stato asta), `get(pathname, { access: 'private', useCache: false })`: bypassa la CDN e garantisce l'ultima versione. Senza questo flag un overwrite può impiegare **fino a 60 secondi** a propagarsi, e in asta significa perdere assegnazioni.
 
@@ -316,7 +316,9 @@ Due strade, entrambe valide:
 
 ## Autenticazione
 
-App raggiungibile da internet ma a utente singolo. Password unica in env `APP_PASSWORD`, cookie httpOnly firmato HMAC (`jose`), verificato in `src/proxy.ts` per il redirect al login — **e ri-verificato dentro ogni Route Handler** che tocca Blob, perché la doc Vercel sconsiglia di affidare a un middleware la protezione di contenuti privati.
+**Nessuna.** L'app è aperta a chiunque conosca l'URL del deploy: niente password, niente cookie di sessione, niente `proxy.ts`. Rimossa il 18 agosto 2026 perché il login a password bloccava il deploy Vercel.
+
+Conseguenza da tenere presente: strategia, prezzi massimi e rose sono leggibili **e scrivibili** da chiunque arrivi all'indirizzo. Lo store Blob resta privato — non è indicizzabile e non si raggiunge indovinando un URL di blob — ma le pagine e le Route Handler dell'app lo espongono senza filtri. Se serve richiudere: Vercel Authentication (Settings → Deployment Protection) protegge il deploy senza rimettere codice nell'app.
 
 ---
 
@@ -345,7 +347,7 @@ Ordinate per percorso critico: l'app deve essere **utilizzabile a un'asta reale 
 
 | # | Fase | Contenuto |
 |---|---|---|
-| 0 | Setup | `create-next-app`, shadcn init (`base-nova`/neutral), Tailwind 4, Vitest `.mts`, Playwright, ESLint, store Blob privato, auth a password, `AGENTS.md` di progetto |
+| 0 | Setup | `create-next-app`, shadcn init (`base-nova`/neutral), Tailwind 4, Vitest `.mts`, Playwright, ESLint, store Blob privato, `AGENTS.md` di progetto |
 | 1 | Data layer | Schemi zod di tutti i documenti, `src/lib/blob/repository.ts` (read con `useCache:false`, write con `ifMatch` + retry), tipi dominio |
 | 2 | Import listone | Importer multi-formato con rilevamento intestazioni e mapping guidato, profili per fonte, anteprima diff, versioning |
 | 3 | Listone base | Tabella virtualizzata, filtri, ordinamento, fasce calcolate |
@@ -364,7 +366,6 @@ Ordinate per percorso critico: l'app deve essere **utilizzabile a un'asta reale 
 
 ```
 src/
-  proxy.ts                          middleware Next 16 (auth)
   app/
     (app)/asta/[id]/page.tsx        ← schermata critica
     (app)/listone/page.tsx
@@ -372,7 +373,6 @@ src/
     (app)/strategia/[id]/genera/page.tsx   copia prompt / incolla risposta
     (app)/riepilogo/[id]/page.tsx
     (app)/impostazioni/listone/page.tsx
-    login/page.tsx
     api/aste/[id]/board/route.ts    POST event log (ifMatch + merge su 412)
     api/listone/import/route.ts     upload + parse + versioning
     api/cron/stats/route.ts         trigger scraping
@@ -390,7 +390,6 @@ src/
     pricing.ts                      inflazione teorica + osservata, fasce
     listone/parser.ts               xlsx|csv → Player[], mapping colonne
     matching.ts                     normalizzazione + fuzzy name matching
-    auth.ts
   stores/asta-store.ts              Zustand + persistenza IndexedDB
   components/asta/                  command-bar, teams-grid, event-log
   components/listone/               data-table, player-sheet, compare
@@ -414,7 +413,7 @@ scripts/dossier/                    generazione batch dossier → Blob
 
 **E2E (Playwright)** — un flusso che replica l'uso reale:
 
-1. login → import listone di fixture con mapping guidato → verifica conteggio giocatori
+1. import listone di fixture con mapping guidato → verifica conteggio giocatori
 2. crea asta a 8 squadre, 500 crediti, 25 slot, **budget chiuso**
 3. assegna 5 giocatori a squadre diverse → verifica crediti residui e max offerta calcolati
 4. undo dell'ultimo → verifica che il giocatore torni tra i liberi

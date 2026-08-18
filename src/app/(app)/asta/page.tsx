@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
+import { connection } from "next/server";
 import { getAsteIndex } from "@/lib/blob/repository";
 import { CreaAstaForm } from "@/components/asta/crea-asta-form";
 
 export default async function AsteIndexPage() {
-  if (!(await requireSession())) redirect("/login");
+  // Unica pagina senza params/searchParams: senza questo Next la prerenderebbe
+  // a build time, leggendo da Blob durante il build e servendo poi un elenco
+  // aste congelato. L'elenco va letto a ogni richiesta.
+  await connection();
 
   const index = await getAsteIndex();
   const aste = [...(index?.data.aste ?? [])].sort((a, b) => b.createdAt - a.createdAt);

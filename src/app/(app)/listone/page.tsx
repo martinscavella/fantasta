@@ -1,14 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
 import { getListone, getListoneIndex, getStats, getStatsIndex } from "@/lib/blob/repository";
 import { fasciaStandard } from "@/lib/pricing";
 import { ListoneClient } from "@/components/listone/listone-client";
 import type { RigaListone } from "@/components/listone/data-table";
 
 export default async function ListonePage({ searchParams }: PageProps<"/listone">) {
-  if (!(await requireSession())) redirect("/login");
-
   const { stagione } = await searchParams;
 
   if (!stagione) {

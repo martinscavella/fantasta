@@ -1,7 +1,5 @@
 import { defineConfig } from "@playwright/test";
 
-// App single-user protetta da password (vedi src/proxy.ts). Il flusso e2e
-// effettua il login con APP_PASSWORD (env, vedi .env.local) prima di ogni test.
 export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,

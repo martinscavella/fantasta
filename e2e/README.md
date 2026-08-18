@@ -1,14 +1,13 @@
 # E2E (Playwright)
 
-Nessun test ancora: il flusso critico (login → import listone → crea asta →
+Nessun test ancora: il flusso critico (import listone → crea asta →
 assegna/undo → offline → sforo → generatore strategia) è descritto nella
 sezione "Verifica" di [`PLAN.md`](../PLAN.md) e va scritto man mano che le
 fasi 2–7b vengono implementate.
 
 ## Prerequisiti (quando i test esisteranno)
 
-1. `.env.local` con `APP_PASSWORD`, `SESSION_SECRET` e `BLOB_READ_WRITE_TOKEN`
-   validi (vedi `.env.example`).
+1. `.env.local` con un `BLOB_READ_WRITE_TOKEN` valido (vedi `.env.example`).
 2. Browser Playwright installati: `npx playwright install chromium`.
 
 ## Esecuzione

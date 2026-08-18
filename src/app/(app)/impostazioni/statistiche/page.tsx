@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth";
 import { getAliases, getListone, getListoneIndex, getStats, getStatsIndex } from "@/lib/blob/repository";
 import { CodaRevisione, type RigaDaRivedere } from "@/components/statistiche/coda-revisione";
 
@@ -9,8 +7,6 @@ function formattaData(ts: number | null): string {
 }
 
 export default async function StatistichePage({ searchParams }: PageProps<"/impostazioni/statistiche">) {
-  if (!(await requireSession())) redirect("/login");
-
   const { stagione: stagioneParam } = await searchParams;
   const stagione = Array.isArray(stagioneParam) ? stagioneParam[0] : stagioneParam;
 

@@ -1,6 +1,5 @@
 "use server";
 
-import { requireSession } from "@/lib/auth";
 import { updateStrategy } from "@/lib/blob/repository";
 import { StrategyDocSchema, type StrategyDoc } from "@/lib/blob/schemas";
 import type { StrategiaGenerata } from "@/lib/ai/schemas";
@@ -8,8 +7,6 @@ import type { StrategiaGenerata } from "@/lib/ai/schemas";
 export type SalvaStrategiaResult = { ok: true; savedAt: number } | { ok: false; error: string };
 
 export async function salvaStrategia(astaId: string, strategyInput: StrategyDoc): Promise<SalvaStrategiaResult> {
-  if (!(await requireSession())) return { ok: false, error: "Sessione scaduta, ricarica la pagina" };
-
   const parsed = StrategyDocSchema.safeParse({ ...strategyInput, updatedAt: Date.now() });
   if (!parsed.success) return { ok: false, error: "Dati non validi" };
 
@@ -40,8 +37,6 @@ export async function applicaStrategiaGenerata(
   astaId: string,
   generata: StrategiaGenerata,
 ): Promise<SalvaStrategiaResult> {
-  if (!(await requireSession())) return { ok: false, error: "Sessione scaduta, ricarica la pagina" };
-
   const savedAt = Date.now();
   try {
     await updateStrategy(astaId, { astaId, ...FALLBACK_VUOTO }, (current) =>
