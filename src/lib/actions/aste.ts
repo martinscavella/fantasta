@@ -22,6 +22,7 @@ export async function creaAsta(_prevState: CreaAstaState, formData: FormData): P
   const sforoTipo = formData.get("sforoTipo");
   const euroPerCredito = Number(formData.get("euroPerCredito") ?? 0);
   const squadreRaw = String(formData.get("squadre") ?? "");
+  const miaSquadraIndex = Number(formData.get("miaSquadraIndex") ?? 0);
 
   if (!nome || !stagione) return { error: "Nome e stagione sono obbligatori" };
 
@@ -35,6 +36,11 @@ export async function creaAsta(_prevState: CreaAstaState, formData: FormData): P
     .map((s) => s.trim())
     .filter(Boolean);
   if (nomiSquadre.length < 2) return { error: "Servono almeno due squadre, una per riga" };
+  if (!Number.isInteger(miaSquadraIndex) || miaSquadraIndex < 0 || miaSquadraIndex >= nomiSquadre.length) {
+    return { error: "Indica quale squadra è la tua" };
+  }
+
+  const squadre = nomiSquadre.map((n) => ({ id: randomUUID(), nome: n }));
 
   let setup;
   try {
@@ -46,7 +52,8 @@ export async function creaAsta(_prevState: CreaAstaState, formData: FormData): P
       modalita: "classic",
       creditiBase,
       slot: { P: slotP, D: slotD, C: slotC, A: slotA },
-      squadre: nomiSquadre.map((n) => ({ id: randomUUID(), nome: n })),
+      squadre,
+      miaSquadraId: squadre[miaSquadraIndex].id,
       sforo: sforoTipo === "a-pagamento" ? { tipo: "a-pagamento", euroPerCredito } : { tipo: "nessuno" },
       createdAt: Date.now(),
     });

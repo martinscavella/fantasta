@@ -4,6 +4,8 @@ import {
   AliasesDocSchema,
   AsteIndexSchema,
   BoardDocSchema,
+  DebriefDocSchema,
+  DossierDocSchema,
   ListoneDocSchema,
   ListoneIndexSchema,
   ProfiliMappingDocSchema,
@@ -14,6 +16,8 @@ import {
   type AliasesDoc,
   type AsteIndex,
   type BoardDoc,
+  type DebriefDoc,
+  type DossierDoc,
   type ListoneDoc,
   type ListoneIndex,
   type ProfiliMappingDoc,
@@ -136,6 +140,8 @@ const paths = {
   setup: (astaId: string) => `aste/${astaId}/setup.json`,
   strategy: (astaId: string) => `aste/${astaId}/strategy.json`,
   board: (astaId: string) => `aste/${astaId}/board.json`,
+  dossier: (stagione: string) => `dossier/${stagione}.json`,
+  debrief: (astaId: string) => `aste/${astaId}/debrief.json`,
 } as const;
 
 export function getListone(stagione: string, versionId: string) {
@@ -226,4 +232,20 @@ export function getBoard(astaId: string) {
 
 export function updateBoard(astaId: string, mutate: (current: BoardDoc) => BoardDoc) {
   return updateDoc(paths.board(astaId), BoardDocSchema, { astaId, events: [] }, mutate);
+}
+
+export function getDossier(stagione: string) {
+  return readDoc(paths.dossier(stagione), DossierDocSchema);
+}
+
+export function updateDossier(stagione: string, mutate: (current: DossierDoc) => DossierDoc) {
+  return updateDoc(paths.dossier(stagione), DossierDocSchema, { stagione, giocatori: [] }, mutate);
+}
+
+export function getDebrief(astaId: string) {
+  return readDoc(paths.debrief(astaId), DebriefDocSchema);
+}
+
+export function putDebrief(doc: DebriefDoc) {
+  return writeDoc(paths.debrief(doc.astaId), DebriefDocSchema, doc);
 }

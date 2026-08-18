@@ -27,6 +27,7 @@ export default async function StrategiaPage({ params }: PageProps<"/strategia/[i
       prezziMassimi: [],
       tettoSpesaEuro: null,
       template: null,
+      sintesiIA: null,
       updatedAt: 0,
     };
 

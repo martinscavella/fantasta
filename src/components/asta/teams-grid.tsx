@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import type { StatoSquadraDerivato } from "@/lib/asta/derive";
-import type { Player, Ruolo } from "@/lib/blob/schemas";
+import type { RigaRosa, StatoSquadraDerivato } from "@/lib/asta/derive";
+import type { Ruolo } from "@/lib/blob/schemas";
 
 const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
-
-export type RigaRosa = { player: Player; price: number; eventId: string };
 
 export function TeamsGrid({
   squadre,

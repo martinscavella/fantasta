@@ -15,6 +15,7 @@ function setup(overrides: Partial<SetupDoc> = {}): SetupDoc {
       { id: "t1", nome: "Team 1" },
       { id: "t2", nome: "Team 2" },
     ],
+    miaSquadraId: "t1",
     sforo: { tipo: "nessuno" },
     createdAt: 0,
     ...overrides,

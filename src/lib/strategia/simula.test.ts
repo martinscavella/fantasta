@@ -16,6 +16,7 @@ function setup(overrides: Partial<SetupDoc> = {}): SetupDoc {
     creditiBase: 100,
     slot: { P: 1, D: 1, C: 0, A: 0 },
     squadre: [{ id: "t1", nome: "Team 1" }],
+    miaSquadraId: "t1",
     sforo: { tipo: "nessuno" },
     createdAt: 0,
     ...overrides,
@@ -31,6 +32,7 @@ function strategy(overrides: Partial<StrategyDoc> = {}): StrategyDoc {
     prezziMassimi: [],
     tettoSpesaEuro: null,
     template: null,
+    sintesiIA: null,
     updatedAt: 0,
     ...overrides,
   };

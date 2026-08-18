@@ -17,6 +17,7 @@ function setup(overrides: Partial<SetupDoc> = {}): SetupDoc {
     creditiBase: 100,
     slot: { P: 1, D: 2, C: 2, A: 1 },
     squadre: [{ id: "t1", nome: "Team 1" }],
+    miaSquadraId: "t1",
     sforo: { tipo: "nessuno" },
     createdAt: 0,
     ...overrides,

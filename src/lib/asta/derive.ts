@@ -1,6 +1,6 @@
 import type { AstaState } from "@/lib/asta/reducer";
 import { inflazioneOsservata, inflazioneTeorica, type AcquistoConcluso } from "@/lib/pricing";
-import type { BoardEvent, Player, Ruolo, SetupDoc } from "@/lib/blob/schemas";
+import type { BoardEvent, Player, Ruolo, SetupDoc, Squadra } from "@/lib/blob/schemas";
 
 const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
 
@@ -89,6 +89,25 @@ export function derivaSquadre(state: AstaState, setup: SetupDoc, giocatori: Play
       obbligoPerRuolo,
     };
   });
+}
+
+export type RigaRosa = { player: Player; price: number; eventId: string };
+
+/**
+ * Rosa di ogni squadra a partire dallo stato derivato dell'asta — estratta da
+ * `AstaClient` (dove viveva inline) perché ora serve anche al Riepilogo
+ * post-asta (§ Post-asta nel piano), non solo al tracker.
+ */
+export function costruisciRose(state: AstaState, giocatori: Player[], squadre: Squadra[]): Record<string, RigaRosa[]> {
+  const giocatoriPerId = new Map(giocatori.map((g) => [g.id, g]));
+  const risultato: Record<string, RigaRosa[]> = {};
+  for (const squadra of squadre) risultato[squadra.id] = [];
+  for (const [eventId, a] of Object.entries(state.assegnazioni)) {
+    const player = giocatoriPerId.get(a.playerId);
+    if (!player) continue;
+    (risultato[a.teamId] ??= []).push({ player, price: a.price, eventId });
+  }
+  return risultato;
 }
 
 export type InflazioneCorrente = {

@@ -194,6 +194,10 @@ export const SetupDocSchema = z.object({
   creditiBase: z.number().int().positive(),
   slot: SlotPerRuoloSchema,
   squadre: z.array(SquadraSchema),
+  // Quale squadra tra `squadre` è la mia — serve al Riepilogo (§ Post-asta nel
+  // piano) per sapere di chi calcolare lo scostamento dalla strategia. Le
+  // squadre avversarie non hanno una StrategyDoc propria: solo la mia ce l'ha.
+  miaSquadraId: z.string().min(1),
   sforo: RegoleSforoSchema,
   createdAt: z.number().int().nonnegative(),
 });
@@ -236,6 +240,10 @@ export const StrategyDocSchema = z.object({
   // Tetto di spesa reale in €, solo se l'asta è a sforo (vedi RegoleSforo).
   tettoSpesaEuro: z.number().positive().nullable(),
   template: z.string().nullable(),
+  // Sintesi in prosa dell'ultima generazione del Ponte IA (§ Generatore di
+  // strategia nel piano) — null se la strategia non è mai stata generata.
+  // La provenienza per-prezzo è già coperta da PrezzoMassimo.origine.
+  sintesiIA: z.string().nullable(),
   updatedAt: z.number().int().nonnegative(),
 });
 export type StrategyDoc = z.infer<typeof StrategyDocSchema>;
@@ -273,3 +281,41 @@ export const BoardDocSchema = z.object({
   events: z.array(BoardEventSchema),
 });
 export type BoardDoc = z.infer<typeof BoardDocSchema>;
+
+// --- dossier/{stagione}.json — mutabile --------------------------------------
+// Un solo documento per stagione, condiviso tra le due leghe (§ Dossier
+// giocatori nel piano: "si generano una volta e servono entrambe le leghe").
+
+export const LivelloRischioSchema = z.enum(["basso", "medio", "alto"]);
+export type LivelloRischio = z.infer<typeof LivelloRischioSchema>;
+
+export const DossierEntrySchema = z.object({
+  playerId: z.number().int(),
+  puntiForza: z.array(z.string()),
+  puntiDebolezza: z.array(z.string()),
+  rischioInfortuni: LivelloRischioSchema,
+  rischioTitolarita: LivelloRischioSchema,
+  noteRecenti: z.string(),
+  prezzoConsigliato: z.number().nonnegative(),
+  motivazionePrezzo: z.string(),
+  alternative: z.array(z.number().int()),
+  generatoAt: z.number().int().nonnegative(),
+});
+export type DossierEntry = z.infer<typeof DossierEntrySchema>;
+
+export const DossierDocSchema = z.object({
+  stagione: z.string().min(1),
+  giocatori: z.array(DossierEntrySchema),
+});
+export type DossierDoc = z.infer<typeof DossierDocSchema>;
+
+// --- aste/{astaId}/debrief.json — mutabile -----------------------------------
+// Prosa libera (§ Debrief post-asta nel piano: "la risposta è prosa da
+// leggere, non serve nemmeno importarla") — nessuno schema sul contenuto.
+
+export const DebriefDocSchema = z.object({
+  astaId: z.string().min(1),
+  testo: z.string(),
+  updatedAt: z.number().int().nonnegative(),
+});
+export type DebriefDoc = z.infer<typeof DebriefDocSchema>;

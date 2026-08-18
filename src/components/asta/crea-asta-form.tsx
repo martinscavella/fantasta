@@ -17,6 +17,14 @@ import {
 export function CreaAstaForm() {
   const [state, formAction, pending] = useActionState(creaAsta, undefined);
   const [sforoTipo, setSforoTipo] = useState<"nessuno" | "a-pagamento">("nessuno");
+  const [squadreTesto, setSquadreTesto] = useState("");
+  const [miaSquadraIndex, setMiaSquadraIndex] = useState("0");
+
+  const righeSquadre = squadreTesto
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const indiceValido = Number(miaSquadraIndex) < righeSquadre.length ? miaSquadraIndex : "0";
 
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded-xl border border-border p-4">
@@ -86,8 +94,37 @@ export function CreaAstaForm() {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="squadre">Squadre (una per riga, almeno due)</Label>
-        <Textarea id="squadre" name="squadre" rows={6} placeholder={"Squadra 1\nSquadra 2\nSquadra 3"} required />
+        <Textarea
+          id="squadre"
+          name="squadre"
+          rows={6}
+          placeholder={"Squadra 1\nSquadra 2\nSquadra 3"}
+          value={squadreTesto}
+          onChange={(e) => setSquadreTesto(e.target.value)}
+          required
+        />
       </div>
+
+      {righeSquadre.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="miaSquadraIndex">La tua squadra</Label>
+          {/* Se righeSquadre si accorcia dopo la selezione, l'indice scelto potrebbe
+              non esistere più: si ricade sulla prima riga invece di uno stato invalido. */}
+          <input type="hidden" name="miaSquadraIndex" value={indiceValido} />
+          <Select value={indiceValido} onValueChange={(v) => setMiaSquadraIndex(v ?? "0")}>
+            <SelectTrigger size="sm" className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {righeSquadre.map((nome, i) => (
+                <SelectItem key={i} value={String(i)}>
+                  {nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
 

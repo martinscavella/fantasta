@@ -50,6 +50,9 @@ export function StrategiaClient({
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Strategia — {setup.nome}</h1>
         <div className="flex items-center gap-3">
+          <Link href={`/strategia/${setup.id}/genera`} className="text-sm text-muted-foreground hover:text-foreground">
+            Genera con IA
+          </Link>
           <Link href={`/asta/${setup.id}`} className="text-sm text-muted-foreground hover:text-foreground">
             Torna all&apos;asta
           </Link>
@@ -60,6 +63,13 @@ export function StrategiaClient({
         </div>
       </div>
       {errore && <p className="text-sm text-destructive">{errore}</p>}
+
+      {strategy.sintesiIA && (
+        <section className="rounded-xl border border-border bg-muted/30 p-3 text-sm">
+          <h2 className="mb-1 text-sm font-medium text-muted-foreground">Sintesi generata dall&apos;IA</h2>
+          <p className="whitespace-pre-wrap">{strategy.sintesiIA}</p>
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-muted-foreground">Fasce</h2>

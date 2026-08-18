@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAstaStore, caricaEIniziaAsta } from "@/stores/asta-store";
 import { reduceBoard } from "@/lib/asta/reducer";
-import { derivaInflazione, derivaSquadre } from "@/lib/asta/derive";
+import { costruisciRose, derivaInflazione, derivaSquadre } from "@/lib/asta/derive";
 import { fasciaStandard, prezzoMassimoDefault, prezzoReattivo } from "@/lib/pricing";
 import { CommandBar } from "@/components/asta/command-bar";
-import { TeamsGrid, type RigaRosa } from "@/components/asta/teams-grid";
+import { TeamsGrid } from "@/components/asta/teams-grid";
 import { EventLog, type VoceLog } from "@/components/asta/event-log";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -86,16 +86,10 @@ export function AstaClient({
     });
   }, [giocatoriLiberi, filtroRuolo, filtroTesto]);
 
-  const rose = useMemo(() => {
-    const risultato: Record<string, RigaRosa[]> = {};
-    for (const squadra of setup.squadre) risultato[squadra.id] = [];
-    for (const [eventId, a] of Object.entries(astaState.assegnazioni)) {
-      const player = giocatoriPerId.get(a.playerId);
-      if (!player) continue;
-      (risultato[a.teamId] ??= []).push({ player, price: a.price, eventId });
-    }
-    return risultato;
-  }, [astaState, giocatoriPerId, setup.squadre]);
+  const rose = useMemo(
+    () => costruisciRose(astaState, giocatori, setup.squadre),
+    [astaState, giocatori, setup.squadre],
+  );
 
   const squadrePerId = useMemo(() => new Map(setup.squadre.map((s) => [s.id, s.nome])), [setup.squadre]);
   const vociLog: VoceLog[] = useMemo(() => {
@@ -153,6 +147,9 @@ export function AstaClient({
           )}
           <Link href={`/strategia/${setup.id}`} className="text-sm text-muted-foreground hover:text-foreground">
             Strategia
+          </Link>
+          <Link href={`/riepilogo/${setup.id}`} className="text-sm text-muted-foreground hover:text-foreground">
+            Riepilogo
           </Link>
           <Badge variant={syncStatus === "offline" ? "outline" : "secondary"}>{statoLabel}</Badge>
         </div>
