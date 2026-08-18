@@ -367,6 +367,7 @@ Ordinate per percorso critico: l'app deve essere **utilizzabile a un'asta reale 
 ```
 src/
   app/
+    (app)/page.tsx                  home: indice delle sezioni
     (app)/asta/[id]/page.tsx        ← schermata critica
     (app)/listone/page.tsx
     (app)/strategia/[id]/page.tsx

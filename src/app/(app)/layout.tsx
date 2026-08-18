@@ -4,7 +4,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-svh flex-col">
       <header className="flex items-center gap-4 border-b border-border px-6 py-3">
-        <span className="font-semibold">Fantasta</span>
+        <Link href="/" className="font-semibold">
+          Fantasta
+        </Link>
         <nav className="flex gap-3 text-sm text-muted-foreground">
           <Link href="/asta" className="hover:text-foreground">
             Aste
