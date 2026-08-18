@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
-import { getListone, getListoneIndex } from "@/lib/blob/repository";
+import { getListone, getListoneIndex, getStats, getStatsIndex } from "@/lib/blob/repository";
 import { fasciaStandard } from "@/lib/pricing";
-import { ListoneDataTable, type RigaListone } from "@/components/listone/data-table";
+import { ListoneClient } from "@/components/listone/listone-client";
+import type { RigaListone } from "@/components/listone/data-table";
 
 export default async function ListonePage({ searchParams }: PageProps<"/listone">) {
   if (!(await requireSession())) redirect("/login");
@@ -49,16 +50,27 @@ export default async function ListonePage({ searchParams }: PageProps<"/listone"
     );
   }
 
-  const listone = await getListone(stagioneValue, index.data.current);
+  const [listone, statsIndex] = await Promise.all([
+    getListone(stagioneValue, index.data.current),
+    getStatsIndex(stagioneValue),
+  ]);
+  const stats = statsIndex?.data.current ? await getStats(stagioneValue, statsIndex.data.current) : null;
+
+  // Un giocatore può avere più righe di stats risolte alla stessa playerId
+  // solo se più fonti la abbinano allo stesso id; qui basta l'ultima vinta —
+  // non c'è ancora un merge multi-fonte (§ Scraping statistiche, fuori scope Fase 8).
+  const statsPerPlayerId = new Map((stats?.data.giocatori ?? []).filter((s) => s.playerId !== null).map((s) => [s.playerId!, s]));
+
   const giocatori: RigaListone[] = (listone?.data.giocatori ?? []).map((g) => ({
     ...g,
     fascia: fasciaStandard(g.quotazioneAttuale),
+    stats: statsPerPlayerId.get(g.id) ?? null,
   }));
 
   return (
     <div className="flex flex-col gap-4 p-6">
       <h1 className="text-xl font-semibold">Listone {stagioneValue}</h1>
-      <ListoneDataTable giocatori={giocatori} />
+      <ListoneClient giocatori={giocatori} />
     </div>
   );
 }

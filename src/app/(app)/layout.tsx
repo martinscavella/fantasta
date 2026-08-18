@@ -12,6 +12,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Link href="/listone" className="hover:text-foreground">
             Listone
           </Link>
+          <Link href="/impostazioni/statistiche" className="hover:text-foreground">
+            Statistiche
+          </Link>
         </nav>
       </header>
       <main className="flex-1">{children}</main>

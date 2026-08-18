@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { derivaSquadre, giocatoriLiberiPerRuolo } from "@/lib/asta/derive";
+import { derivaInflazione, derivaSquadre, giocatoriLiberiPerRuolo } from "@/lib/asta/derive";
 import type { AstaState } from "@/lib/asta/reducer";
-import type { Player, SetupDoc } from "@/lib/blob/schemas";
+import type { BoardEvent, Player, SetupDoc } from "@/lib/blob/schemas";
 
 function giocatore(id: number, ruolo: Player["ruolo"], squadra = "Milan"): Player {
   return { id, nome: `G${id}`, squadra, ruolo, quotazioneAttuale: 10, quotazioneIniziale: 10 };
@@ -118,5 +118,56 @@ describe("giocatoriLiberiPerRuolo e obbligo", () => {
     const state = stato({ e1: { playerId: 1, teamId: "t1", price: 10 } });
     const [team] = derivaSquadre(state, s, [giocatore(1, "P")]);
     expect(team.obbligoPerRuolo.P).toBe(false);
+  });
+});
+
+describe("derivaInflazione", () => {
+  function assign(id: string, playerId: number, teamId: string, price: number, ts: number): BoardEvent {
+    return { id, ts, type: "ASSIGN", playerId, teamId, price };
+  }
+
+  it("a budget chiuso calcola sia teorica che osservata", () => {
+    const s = setup({ slot: { P: 2, D: 0, C: 0, A: 0 }, creditiBase: 100, squadre: [{ id: "t1", nome: "Team 1" }] });
+    const giocatori = [giocatore(1, "P"), giocatore(2, "P")]; // quotazione 10 ciascuno
+    const events: BoardEvent[] = [assign("e1", 1, "t1", 15, 1)];
+    const state = stato({ e1: { playerId: 1, teamId: "t1", price: 15 } });
+
+    const risultato = derivaInflazione(state, s, giocatori, events);
+    expect(risultato.teorica).not.toBeNull(); // 85 crediti residui / 10 di quotazione libera
+    expect(risultato.osservata).toBe(1.5); // 15/10
+    expect(risultato.effettiva).toBe(risultato.teorica);
+  });
+
+  it("a sforo, teorica è null e l'effettiva coincide con l'osservata", () => {
+    const s = setup({
+      slot: { P: 1, D: 0, C: 0, A: 0 },
+      creditiBase: 100,
+      sforo: { tipo: "a-pagamento", euroPerCredito: 0.1 },
+    });
+    const giocatori = [giocatore(1, "P")];
+    const events: BoardEvent[] = [assign("e1", 1, "t1", 20, 1)];
+    const state = stato({ e1: { playerId: 1, teamId: "t1", price: 20 } });
+
+    const risultato = derivaInflazione(state, s, giocatori, events);
+    expect(risultato.teorica).toBeNull();
+    expect(risultato.osservata).toBe(2);
+    expect(risultato.effettiva).toBe(2);
+  });
+
+  it("a inizio asta (nessun acquisto), osservata è null ma teorica è comunque calcolabile", () => {
+    const s = setup({ slot: { P: 1, D: 0, C: 0, A: 0 }, creditiBase: 100 });
+    const giocatori = [giocatore(1, "P")];
+    const risultato = derivaInflazione(stato({}), s, giocatori, []);
+    expect(risultato.osservata).toBeNull();
+    expect(risultato.teorica).toBe(10); // 100 crediti residui / 10 di quotazione
+  });
+
+  it("a fine asta (nessun giocatore libero), teorica è null", () => {
+    const s = setup({ slot: { P: 1, D: 0, C: 0, A: 0 }, creditiBase: 100 });
+    const giocatori = [giocatore(1, "P")];
+    const events: BoardEvent[] = [assign("e1", 1, "t1", 10, 1)];
+    const state = stato({ e1: { playerId: 1, teamId: "t1", price: 10 } });
+    const risultato = derivaInflazione(state, s, giocatori, events);
+    expect(risultato.teorica).toBeNull();
   });
 });

@@ -14,10 +14,12 @@ type Fase =
 export function CommandBar({
   giocatoriLiberi,
   squadre,
+  prezzoReattivoPerId,
   onAssegna,
 }: {
   giocatoriLiberi: Player[];
   squadre: StatoSquadraDerivato[];
+  prezzoReattivoPerId: Map<number, number>;
   onAssegna: (playerId: number, teamId: string, price: number) => void;
 }) {
   const [fase, setFase] = useState<Fase>({ tipo: "cerca" });
@@ -87,6 +89,11 @@ export function CommandBar({
         <span className="font-mono text-xs text-muted-foreground">{fase.giocatore.ruolo}</span>
         <span className="flex-1 font-medium">{fase.giocatore.nome}</span>
         <span className="text-xs text-muted-foreground">Qt. {fase.giocatore.quotazioneAttuale}</span>
+        {prezzoReattivoPerId.has(fase.giocatore.id) && (
+          <span className="text-xs text-muted-foreground" title="Prezzo massimo reattivo">
+            max consigliato {prezzoReattivoPerId.get(fase.giocatore.id)}
+          </span>
+        )}
         <Input ref={prezzoInputRef} name="prezzo" type="number" min={0} step={1} placeholder="Prezzo" className="w-24" required />
       </form>
     );

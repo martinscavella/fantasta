@@ -17,6 +17,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!login|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // api/cron/* ha un'autenticazione propria (CRON_SECRET, vedi
+    // api/cron/stats/route.ts): le chiamate di Vercel Cron non hanno un
+    // cookie di sessione, quindi il proxy le rediretterebbe sempre a /login.
+    "/((?!login|api/cron|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

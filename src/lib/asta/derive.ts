@@ -1,5 +1,6 @@
 import type { AstaState } from "@/lib/asta/reducer";
-import type { Player, Ruolo, SetupDoc } from "@/lib/blob/schemas";
+import { inflazioneOsservata, inflazioneTeorica, type AcquistoConcluso } from "@/lib/pricing";
+import type { BoardEvent, Player, Ruolo, SetupDoc } from "@/lib/blob/schemas";
 
 const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
 
@@ -88,4 +89,49 @@ export function derivaSquadre(state: AstaState, setup: SetupDoc, giocatori: Play
       obbligoPerRuolo,
     };
   });
+}
+
+export type InflazioneCorrente = {
+  // null a sforo (la formula "si rompe", vedi § Modalità sforo nel piano) o a fine asta.
+  teorica: number | null;
+  // null finché non c'è almeno un acquisto concluso.
+  osservata: number | null;
+  // Quella da usare per il prezzo reattivo: teorica quando applicabile (budget
+  // chiuso), altrimenti osservata — coincide con "osservata" a sforo.
+  effettiva: number | null;
+};
+
+/**
+ * Inflazione corrente della lega, dedotta dallo stato dell'asta. `events`
+ * serve solo per il ts degli ASSIGN (necessario per pesare verso i più
+ * recenti in inflazioneOsservata) — AstaState non lo conserva.
+ */
+export function derivaInflazione(
+  state: AstaState,
+  setup: SetupDoc,
+  giocatori: Player[],
+  events: BoardEvent[],
+): InflazioneCorrente {
+  const assegnatiIds = new Set(Object.values(state.assegnazioni).map((a) => a.playerId));
+  const giocatoriLiberi = giocatori.filter((g) => !assegnatiIds.has(g.id));
+  const giocatoriPerId = new Map(giocatori.map((g) => [g.id, g]));
+  const tsPerAssign = new Map(events.filter((e) => e.type === "ASSIGN").map((e) => [e.id, e.ts]));
+
+  const acquisti: AcquistoConcluso[] = Object.entries(state.assegnazioni).flatMap(([eventId, a]) => {
+    const player = giocatoriPerId.get(a.playerId);
+    const ts = tsPerAssign.get(eventId);
+    if (!player || ts === undefined) return [];
+    return [{ prezzoPagato: a.price, quotazione: player.quotazioneAttuale, ts }];
+  });
+
+  const osservata = inflazioneOsservata(acquisti);
+
+  let teorica: number | null = null;
+  if (setup.sforo.tipo === "nessuno") {
+    const squadre = derivaSquadre(state, setup, giocatori);
+    const creditiResiduiLega = squadre.reduce((tot, s) => tot + s.creditiResidui, 0);
+    teorica = inflazioneTeorica(creditiResiduiLega, giocatoriLiberi);
+  }
+
+  return { teorica, osservata, effettiva: teorica ?? osservata };
 }

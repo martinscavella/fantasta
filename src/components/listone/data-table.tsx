@@ -22,10 +22,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Player, Ruolo } from "@/lib/blob/schemas";
-import type { FasciaStandard } from "@/lib/pricing";
+import { FASCIA_BADGE_VARIANT, type FasciaStandard } from "@/lib/pricing";
+import type { Player, PlayerStats, Ruolo } from "@/lib/blob/schemas";
 
-export type RigaListone = Player & { fascia: FasciaStandard | null };
+export type RigaListone = Player & { fascia: FasciaStandard | null; stats: PlayerStats | null };
 
 const features = tableFeatures({
   rowSortingFeature,
@@ -37,14 +37,7 @@ const features = tableFeatures({
 
 const helper = createColumnHelper<typeof features, RigaListone>();
 
-const FASCIA_VARIANT: Record<FasciaStandard, "default" | "secondary" | "outline"> = {
-  Top: "default",
-  Semitop: "secondary",
-  "Terza fascia": "outline",
-  Scommesse: "outline",
-};
-
-const columns = helper.columns([
+const colonneDati = helper.columns([
   helper.accessor("nome", { header: "Nome", size: 200, sortFn: "alphanumeric" }),
   helper.accessor("squadra", { header: "Squadra", size: 120, sortFn: "alphanumeric" }),
   helper.accessor("ruolo", { header: "R", size: 56, sortFn: "alphanumeric" }),
@@ -54,7 +47,7 @@ const columns = helper.columns([
     sortFn: "alphanumeric",
     cell: (ctx) => {
       const fascia = ctx.getValue();
-      return fascia ? <Badge variant={FASCIA_VARIANT[fascia]}>{fascia}</Badge> : null;
+      return fascia ? <Badge variant={FASCIA_BADGE_VARIANT[fascia]}>{fascia}</Badge> : null;
     },
   }),
   helper.accessor("quotazioneAttuale", { header: "Qt.A", size: 80, sortFn: "basic" }),
@@ -68,11 +61,50 @@ const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
 const FASCE: FasciaStandard[] = ["Top", "Semitop", "Terza fascia", "Scommesse"];
 const TUTTI = "_tutti";
 const ROW_HEIGHT = 36;
+export const MAX_CONFRONTO = 4;
 
-export function ListoneDataTable({ giocatori }: { giocatori: RigaListone[] }) {
+export function ListoneDataTable({
+  giocatori,
+  selezionati,
+  onToggleSeleziona,
+  onApriScheda,
+}: {
+  giocatori: RigaListone[];
+  selezionati: Set<number>;
+  onToggleSeleziona: (id: number) => void;
+  onApriScheda: (id: number) => void;
+}) {
   const [ricerca, setRicerca] = useState("");
   const [ruolo, setRuolo] = useState<string>(TUTTI);
   const [fascia, setFascia] = useState<string>(TUTTI);
+
+  const columns = useMemo(
+    () => [
+      helper.display({
+        id: "confronto",
+        header: "",
+        size: 32,
+        enableHiding: false,
+        enableSorting: false,
+        cell: (ctx) => {
+          const id = ctx.row.original.id;
+          const selezionato = selezionati.has(id);
+          return (
+            <input
+              type="checkbox"
+              checked={selezionato}
+              disabled={!selezionato && selezionati.size >= MAX_CONFRONTO}
+              onClick={(e) => e.stopPropagation()}
+              onChange={() => onToggleSeleziona(id)}
+              title="Aggiungi al confronto"
+            />
+          );
+        },
+      }),
+      ...colonneDati,
+    ],
+    [selezionati, onToggleSeleziona],
+  );
 
   const data = useMemo(() => {
     const query = ricerca.trim().toLowerCase();
@@ -181,7 +213,8 @@ export function ListoneDataTable({ giocatori }: { giocatori: RigaListone[] }) {
                 <div
                   key={row.id}
                   data-index={item.index}
-                  className="flex border-b border-border/60 hover:bg-muted/50"
+                  className="flex cursor-pointer border-b border-border/60 hover:bg-muted/50"
+                  onClick={() => onApriScheda(row.original.id)}
                   style={{
                     position: "absolute",
                     top: 0,

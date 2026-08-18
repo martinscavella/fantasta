@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAstaStore, caricaEIniziaAsta } from "@/stores/asta-store";
 import { reduceBoard } from "@/lib/asta/reducer";
-import { derivaSquadre } from "@/lib/asta/derive";
-import { fasciaStandard } from "@/lib/pricing";
+import { derivaInflazione, derivaSquadre } from "@/lib/asta/derive";
+import { fasciaStandard, prezzoMassimoDefault, prezzoReattivo } from "@/lib/pricing";
 import { CommandBar } from "@/components/asta/command-bar";
 import { TeamsGrid, type RigaRosa } from "@/components/asta/teams-grid";
 import { EventLog, type VoceLog } from "@/components/asta/event-log";
@@ -17,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { BoardEvent, Player, Ruolo, SetupDoc } from "@/lib/blob/schemas";
+import type { BoardEvent, Player, PrezzoMassimo, Ruolo, SetupDoc } from "@/lib/blob/schemas";
 
 const TUTTI = "_tutti";
 
@@ -29,10 +30,12 @@ export function AstaClient({
   setup,
   giocatori,
   eventiIniziali,
+  prezziMassimi,
 }: {
   setup: SetupDoc;
   giocatori: Player[];
   eventiIniziali: BoardEvent[];
+  prezziMassimi: PrezzoMassimo[];
 }) {
   const events = useAstaStore((s) => s.events);
   const syncStatus = useAstaStore((s) => s.syncStatus);
@@ -53,6 +56,20 @@ export function AstaClient({
 
   const astaState = useMemo(() => reduceBoard(events, setup, ruoloPerGiocatore), [events, setup, ruoloPerGiocatore]);
   const squadreDerivate = useMemo(() => derivaSquadre(astaState, setup, giocatori), [astaState, setup, giocatori]);
+  const inflazione = useMemo(
+    () => derivaInflazione(astaState, setup, giocatori, events),
+    [astaState, setup, giocatori, events],
+  );
+
+  const prezzoBasePerId = useMemo(() => new Map(prezziMassimi.map((p) => [p.playerId, p.valore])), [prezziMassimi]);
+  const prezzoReattivoPerId = useMemo(() => {
+    const mappa = new Map<number, number>();
+    for (const g of giocatori) {
+      const base = prezzoBasePerId.get(g.id) ?? prezzoMassimoDefault(g.quotazioneAttuale);
+      mappa.set(g.id, prezzoReattivo(base, inflazione.effettiva));
+    }
+    return mappa;
+  }, [giocatori, prezzoBasePerId, inflazione.effettiva]);
 
   const assegnatiIds = useMemo(
     () => new Set(Object.values(astaState.assegnazioni).map((a) => a.playerId)),
@@ -123,10 +140,30 @@ export function AstaClient({
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{setup.nome}</h1>
-        <Badge variant={syncStatus === "offline" ? "outline" : "secondary"}>{statoLabel}</Badge>
+        <div className="flex items-center gap-3">
+          {inflazione.teorica !== null && (
+            <span className="text-xs text-muted-foreground">
+              Inflazione teorica: <span className="font-mono">{inflazione.teorica.toFixed(2)}×</span>
+            </span>
+          )}
+          {inflazione.osservata !== null && (
+            <span className="text-xs text-muted-foreground">
+              osservata: <span className="font-mono">{inflazione.osservata.toFixed(2)}×</span>
+            </span>
+          )}
+          <Link href={`/strategia/${setup.id}`} className="text-sm text-muted-foreground hover:text-foreground">
+            Strategia
+          </Link>
+          <Badge variant={syncStatus === "offline" ? "outline" : "secondary"}>{statoLabel}</Badge>
+        </div>
       </div>
 
-      <CommandBar giocatoriLiberi={giocatoriLiberi} squadre={squadreDerivate} onAssegna={assegna} />
+      <CommandBar
+        giocatoriLiberi={giocatoriLiberi}
+        squadre={squadreDerivate}
+        prezzoReattivoPerId={prezzoReattivoPerId}
+        onAssegna={assegna}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-2">
@@ -166,6 +203,9 @@ export function AstaClient({
                       </Badge>
                     )}
                     <span className="w-8 text-right font-mono">{g.quotazioneAttuale}</span>
+                    <span className="w-10 text-right font-mono text-xs text-muted-foreground" title="Prezzo max reattivo">
+                      →{prezzoReattivoPerId.get(g.id)}
+                    </span>
                   </li>
                 );
               })}
