@@ -22,10 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ClubBadge } from "@/components/shared/club-badge";
+import { RUOLO_CLASSI } from "@/lib/ruoli";
+import { cn } from "@/lib/utils";
 import { FASCIA_BADGE_VARIANT, type FasciaStandard } from "@/lib/pricing";
 import type { Player, PlayerStats, Ruolo } from "@/lib/blob/schemas";
 
-export type RigaListone = Player & { fascia: FasciaStandard | null; stats: PlayerStats | null };
+export type RigaListone = Player & {
+  fascia: FasciaStandard | null;
+  stats: PlayerStats | null;
+  // Presente solo nella vista listone di un'asta specifica (§ Tracker
+  // d'asta): chi l'ha preso e a che prezzo, per evidenziarlo invece di
+  // farlo sparire — sul listone globale è sempre null/assente.
+  assegnazione?: { teamNome: string; price: number } | null;
+};
 
 const features = tableFeatures({
   rowSortingFeature,
@@ -38,9 +48,51 @@ const features = tableFeatures({
 const helper = createColumnHelper<typeof features, RigaListone>();
 
 const colonneDati = helper.columns([
-  helper.accessor("nome", { header: "Nome", size: 200, sortFn: "alphanumeric" }),
-  helper.accessor("squadra", { header: "Squadra", size: 120, sortFn: "alphanumeric" }),
-  helper.accessor("ruolo", { header: "R", size: 56, sortFn: "alphanumeric" }),
+  helper.accessor("nome", {
+    header: "Nome",
+    size: 240,
+    sortFn: "alphanumeric",
+    cell: (ctx) => {
+      const assegnazione = ctx.row.original.assegnazione;
+      return (
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className={cn("truncate", assegnazione && "text-muted-foreground line-through")}>{ctx.getValue()}</span>
+          {assegnazione && (
+            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground no-underline">
+              {assegnazione.teamNome} · {assegnazione.price}
+            </span>
+          )}
+        </span>
+      );
+    },
+  }),
+  helper.accessor("squadra", {
+    header: "Squadra",
+    size: 130,
+    sortFn: "alphanumeric",
+    cell: (ctx) => {
+      const squadra = ctx.getValue();
+      return (
+        <span className="flex items-center gap-1.5">
+          <ClubBadge squadra={squadra} size="xs" />
+          <span className="truncate">{squadra}</span>
+        </span>
+      );
+    },
+  }),
+  helper.accessor("ruolo", {
+    header: "R",
+    size: 56,
+    sortFn: "alphanumeric",
+    cell: (ctx) => {
+      const ruolo = ctx.getValue();
+      return (
+        <span className={cn("rounded px-1.5 py-0.5 font-mono text-xs font-semibold", RUOLO_CLASSI[ruolo].badge)}>
+          {ruolo}
+        </span>
+      );
+    },
+  }),
   helper.accessor("fascia", {
     header: "Fascia",
     size: 120,
@@ -55,6 +107,46 @@ const colonneDati = helper.columns([
   helper.accessor("differenza", { header: "Diff.", size: 80, sortFn: "basic", sortUndefined: "last" }),
   helper.accessor("fvm", { header: "FVM", size: 80, sortFn: "basic", sortUndefined: "last" }),
   helper.accessor("fvmMantra", { header: "FVM M", size: 90, sortFn: "basic", sortUndefined: "last" }),
+  helper.accessor((row) => row.stats?.mediaVoto, {
+    id: "mediaVoto",
+    header: "MV",
+    size: 70,
+    sortFn: "basic",
+    sortUndefined: "last",
+    cell: (ctx) => ctx.getValue()?.toFixed(2) ?? "—",
+  }),
+  helper.accessor((row) => row.stats?.fantamedia, {
+    id: "fantamedia",
+    header: "FM",
+    size: 70,
+    sortFn: "basic",
+    sortUndefined: "last",
+    cell: (ctx) => ctx.getValue()?.toFixed(2) ?? "—",
+  }),
+  helper.accessor((row) => row.stats?.presenze, {
+    id: "presenze",
+    header: "Pres.",
+    size: 70,
+    sortFn: "basic",
+    sortUndefined: "last",
+    cell: (ctx) => ctx.getValue() ?? "—",
+  }),
+  helper.accessor((row) => row.stats?.gol, {
+    id: "gol",
+    header: "Gol",
+    size: 60,
+    sortFn: "basic",
+    sortUndefined: "last",
+    cell: (ctx) => ctx.getValue() ?? "—",
+  }),
+  helper.accessor((row) => row.stats?.assist, {
+    id: "assist",
+    header: "Ass.",
+    size: 60,
+    sortFn: "basic",
+    sortUndefined: "last",
+    cell: (ctx) => ctx.getValue() ?? "—",
+  }),
 ]);
 
 const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
@@ -77,6 +169,8 @@ export function ListoneDataTable({
   const [ricerca, setRicerca] = useState("");
   const [ruolo, setRuolo] = useState<string>(TUTTI);
   const [fascia, setFascia] = useState<string>(TUTTI);
+  const [nascondiAssegnati, setNascondiAssegnati] = useState(false);
+  const haAssegnazioni = useMemo(() => giocatori.some((g) => g.assegnazione), [giocatori]);
 
   const columns = useMemo(
     () => [
@@ -111,12 +205,13 @@ export function ListoneDataTable({
     return giocatori.filter((g) => {
       if (ruolo !== TUTTI && g.ruolo !== ruolo) return false;
       if (fascia !== TUTTI && g.fascia !== fascia) return false;
+      if (nascondiAssegnati && g.assegnazione) return false;
       if (query && !g.nome.toLowerCase().includes(query) && !g.squadra.toLowerCase().includes(query)) {
         return false;
       }
       return true;
     });
-  }, [giocatori, ricerca, ruolo, fascia]);
+  }, [giocatori, ricerca, ruolo, fascia, nascondiAssegnati]);
 
   const table = useTable({
     features,
@@ -125,7 +220,7 @@ export function ListoneDataTable({
     getRowId: (row) => String(row.id),
     enableMultiSort: true,
     enableSortingRemoval: false,
-    initialState: { sorting: [{ id: "quotazioneAttuale", desc: true }] },
+    initialState: { sorting: [{ id: "nome", desc: false }] },
   });
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -142,14 +237,18 @@ export function ListoneDataTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
         <Input
           placeholder="Cerca nome o squadra…"
           value={ricerca}
           onChange={(e) => setRicerca(e.target.value)}
           className="w-56"
         />
-        <Select value={ruolo} onValueChange={(v) => setRuolo(v ?? TUTTI)}>
+        <Select
+          value={ruolo}
+          onValueChange={(v) => setRuolo(v ?? TUTTI)}
+          items={{ [TUTTI]: "Tutti i ruoli", ...Object.fromEntries(RUOLI.map((r) => [r, r])) }}
+        >
           <SelectTrigger size="sm">
             <SelectValue placeholder="Ruolo" />
           </SelectTrigger>
@@ -162,7 +261,11 @@ export function ListoneDataTable({
             ))}
           </SelectContent>
         </Select>
-        <Select value={fascia} onValueChange={(v) => setFascia(v ?? TUTTI)}>
+        <Select
+          value={fascia}
+          onValueChange={(v) => setFascia(v ?? TUTTI)}
+          items={{ [TUTTI]: "Tutte le fasce", ...Object.fromEntries(FASCE.map((f) => [f, f])) }}
+        >
           <SelectTrigger size="sm">
             <SelectValue placeholder="Fascia" />
           </SelectTrigger>
@@ -175,6 +278,16 @@ export function ListoneDataTable({
             ))}
           </SelectContent>
         </Select>
+        {haAssegnazioni && (
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={nascondiAssegnati}
+              onChange={(e) => setNascondiAssegnati(e.target.checked)}
+            />
+            Nascondi assegnati
+          </label>
+        )}
         <span className="text-sm text-muted-foreground">{data.length} giocatori</span>
       </div>
 
@@ -191,14 +304,14 @@ export function ListoneDataTable({
         ))}
       </div>
 
-      <div ref={scrollRef} className="max-h-[70vh] overflow-auto rounded-xl border border-border">
+      <div ref={scrollRef} className="max-h-[70vh] overflow-auto rounded-2xl border border-border bg-card shadow-sm">
         <div style={{ width: table.getTotalSize() }}>
-          <div className="sticky top-0 z-10 flex border-b border-border bg-background">
+          <div className="sticky top-0 z-10 flex border-b border-border bg-muted/60 backdrop-blur-sm">
             {table.getFlatHeaders().map((header) => (
               <div
                 key={header.id}
                 style={{ width: header.getSize() }}
-                className="flex shrink-0 cursor-pointer items-center gap-1 px-2 py-2 text-left text-sm font-medium select-none"
+                className="flex shrink-0 cursor-pointer items-center gap-1 px-2 py-2 text-left text-sm font-semibold select-none hover:text-primary"
                 onClick={header.column.getToggleSortingHandler()}
               >
                 <table.FlexRender header={header} />
@@ -213,7 +326,10 @@ export function ListoneDataTable({
                 <div
                   key={row.id}
                   data-index={item.index}
-                  className="flex cursor-pointer border-b border-border/60 hover:bg-muted/50"
+                  className={cn(
+                    "flex cursor-pointer border-b border-border/60 transition-colors hover:bg-accent/40",
+                    row.original.assegnazione && "opacity-50 hover:opacity-100",
+                  )}
                   onClick={() => onApriScheda(row.original.id)}
                   style={{
                     position: "absolute",

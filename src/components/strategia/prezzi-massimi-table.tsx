@@ -56,7 +56,11 @@ export function PrezziMassimiTable({
           onChange={(e) => setFiltroTesto(e.target.value)}
           className="max-w-xs"
         />
-        <Select value={filtroRuolo} onValueChange={(v) => setFiltroRuolo(v ?? TUTTI)}>
+        <Select
+          value={filtroRuolo}
+          onValueChange={(v) => setFiltroRuolo(v ?? TUTTI)}
+          items={{ [TUTTI]: "Tutti", ...Object.fromEntries(RUOLI.map((r) => [r, r])) }}
+        >
           <SelectTrigger size="sm">
             <SelectValue />
           </SelectTrigger>

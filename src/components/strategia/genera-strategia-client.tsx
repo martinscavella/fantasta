@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AstaSubNav } from "@/components/asta/asta-sub-nav";
 import { buildPromptStrategia } from "@/lib/ai/prompts/strategia";
 import { StrategiaGeneratasSchema } from "@/lib/ai/schemas";
 import { importaRisposta } from "@/lib/ai/importa";
@@ -54,10 +55,12 @@ export function GeneraStrategiaClient({ setup, giocatori }: { setup: SetupDoc; g
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6 md:p-8">
+      <AstaSubNav astaId={setup.id} nome={setup.nome} />
+
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Genera strategia — {setup.nome}</h1>
-        <Link href={`/strategia/${setup.id}`} className="text-sm text-muted-foreground hover:text-foreground">
+        <h1 className="text-2xl font-bold tracking-tight">Genera strategia</h1>
+        <Link href={`/strategia/${setup.id}`} className="text-sm text-primary hover:underline">
           Torna alla strategia
         </Link>
       </div>

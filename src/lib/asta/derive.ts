@@ -11,9 +11,11 @@ function contaPerRuolo(): Record<Ruolo, number> {
 export type StatoSquadraDerivato = {
   teamId: string;
   nome: string;
+  creditiBase: number;
   creditiSpesi: number;
   // Può essere negativo in modalità sforo — è il punto (vedi § Modalità sforo).
   creditiResidui: number;
+  slotBase: Record<Ruolo, number>;
   slotOccupati: Record<Ruolo, number>;
   slotResidui: Record<Ruolo, number>;
   slotResiduiTotali: number;
@@ -68,8 +70,10 @@ export function derivaSquadre(state: AstaState, setup: SetupDoc, giocatori: Play
     return {
       teamId: squadra.id,
       nome: squadra.nome,
+      creditiBase: setup.creditiBase,
       creditiSpesi,
       creditiResidui,
+      slotBase: setup.slot,
       slotOccupati,
       slotResidui,
       slotResiduiTotali,

@@ -151,7 +151,7 @@ export async function rowsFromFile(filename: string, buffer: Buffer): Promise<Ro
 // --- rilevamento intestazione + mapping automatico --------------------------
 
 const NAME_TOKENS = ["nome", "calciatore", "giocatore"];
-const TEAM_TOKENS = ["squadra", "team"];
+const TEAM_TOKENS = ["squadra", "team", "sq"];
 
 export function detectHeaderRow(rows: Rows, maxScan = 20): number | null {
   for (let i = 0; i < Math.min(rows.length, maxScan); i++) {
@@ -163,18 +163,22 @@ export function detectHeaderRow(rows: Rows, maxScan = 20): number | null {
   return null;
 }
 
-// Alias esatti (dopo trim + lowercase) per il formato ufficiale Fantacalcio.it:
-// Id, R, RM, Nome, Squadra, Qt.A, Qt.I, Diff., FVM, FVM M. RM (ruolo Mantra) si
-// ignora volutamente — solo FVM M si tiene come segnale (vedi piano).
+// Alias esatti (dopo trim + lowercase) per i formati visti finora:
+// - ufficiale Fantacalcio.it: Id, R, RM, Nome, Squadra, Qt.A, Qt.I, Diff., FVM, FVM M.
+//   RM (ruolo Mantra) si ignora volutamente — solo FVM M si tiene come segnale (vedi piano).
+// - export alternativo (es. tool di lega): #, Nome, Sq., R., FVM/1000, Quot.
+//   Fuori lista/Under/R.MANTRA/PGv/MV/FM/FantaSquadra/Costo non hanno un campo
+//   di destinazione (sono stato di lega o statistiche, non dati del listone) e
+//   restano fuori dalla mappa: ignorati automaticamente, come da progetto.
 const ALIAS_ESATTI: Record<ColonnaTarget, string[]> = {
-  id: ["id"],
-  ruolo: ["r"],
+  id: ["id", "#"],
+  ruolo: ["r", "r."],
   nome: ["nome"],
-  squadra: ["squadra"],
-  quotazioneAttuale: ["qt.a", "qta"],
+  squadra: ["squadra", "sq.", "sq"],
+  quotazioneAttuale: ["qt.a", "qta", "quot.", "quot"],
   quotazioneIniziale: ["qt.i", "qti"],
   differenza: ["diff.", "diff"],
-  fvm: ["fvm"],
+  fvm: ["fvm", "fvm/1000"],
   fvmMantra: ["fvm m", "fvmm", "fvm.m"],
 };
 

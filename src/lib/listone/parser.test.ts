@@ -104,6 +104,71 @@ describe("parseGiocatori — colonna mancante", () => {
   });
 });
 
+// --- formato export alternativo (#, Sq., R., FVM/1000, Quot., + colonne di
+// stato lega senza campo di destinazione: Fuori lista, Under, R.MANTRA, PGv,
+// MV, FM, FantaSquadra, Costo) --------------------------------------------
+
+describe("autoMapColumns + parseGiocatori — formato export alternativo", () => {
+  const HEADER_ALTERNATIVO = [
+    "#",
+    "Nome",
+    "Fuori lista",
+    "Sq.",
+    "Under",
+    "R.",
+    "R.MANTRA",
+    "PGv",
+    "MV",
+    "FM",
+    "FVM/1000",
+    "QUOT.",
+    "FantaSquadra",
+    "Costo",
+  ];
+
+  it("mappa da sola id/nome/squadra/ruolo/quotazione/fvm e ignora le colonne di stato lega", () => {
+    const mappa = autoMapColumns(HEADER_ALTERNATIVO);
+    expect(mappa["#"]).toBe("id");
+    expect(mappa["Sq."]).toBe("squadra");
+    expect(mappa["R."]).toBe("ruolo");
+    expect(mappa["FVM/1000"]).toBe("fvm");
+    expect(mappa["QUOT."]).toBe("quotazioneAttuale");
+    // Nessun campo di destinazione per queste: restano fuori dalla mappa.
+    expect(mappa["Fuori lista"]).toBeUndefined();
+    expect(mappa["Under"]).toBeUndefined();
+    expect(mappa["R.MANTRA"]).toBeUndefined();
+    expect(mappa["FantaSquadra"]).toBeUndefined();
+    expect(mappa["Costo"]).toBeUndefined();
+    expect(mappaCompleta(mappa)).toBe(true);
+  });
+
+  it("rileva la riga di intestazione (Sq. non contiene 'squadra' per intero)", () => {
+    const rows = [HEADER_ALTERNATIVO, [2764, "Martinez L", "", "Inter", 29, "A", "Pc", 0, 0, 0, 776, 35, "", ""]];
+    expect(detectHeaderRow(rows)).toBe(0);
+  });
+
+  it("estrae i giocatori usando id dalla colonna '#' e quotazione da 'Quot.'", () => {
+    const rows = [
+      HEADER_ALTERNATIVO,
+      [2764, "Martinez L", "", "Inter", 29, "A", "Pc", 0, 0, 0, 776, 35, "", ""],
+      [5585, "Malen", "", "Roma", 27, "A", "Pc", 0, 0, 0, 765, 34, "", ""],
+    ];
+    const mappa = autoMapColumns(HEADER_ALTERNATIVO);
+    const { giocatori } = parseGiocatori(rows, 0, mappa);
+
+    expect(giocatori).toHaveLength(2);
+    expect(giocatori[0]).toMatchObject({
+      id: 2764,
+      nome: "Martinez L",
+      squadra: "Inter",
+      ruolo: "A",
+      quotazioneAttuale: 35,
+      quotazioneIniziale: 35, // nessuna Qt.I in questo formato: default alla quotazione attuale
+      fvm: 776,
+    });
+  });
+});
+
 // --- CSV in stile Fanta Club: intestazioni libere, mapping guidato ------------
 
 describe("parseCsv — formato Fanta Club (ipotetico, mapping libero)", () => {

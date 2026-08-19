@@ -64,8 +64,8 @@ export default async function ListonePage({ searchParams }: PageProps<"/listone"
   }));
 
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">Listone {stagioneValue}</h1>
+    <div className="flex flex-col gap-5 p-6 md:p-8">
+      <h1 className="text-2xl font-bold tracking-tight">Listone {stagioneValue}</h1>
       <ListoneClient giocatori={giocatori} />
     </div>
   );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AstaSubNav } from "@/components/asta/asta-sub-nav";
 import { FasceEditor } from "@/components/strategia/fasce-editor";
 import { BudgetEditor } from "@/components/strategia/budget-editor";
 import { PrezziMassimiTable } from "@/components/strategia/prezzi-massimi-table";
@@ -46,16 +47,17 @@ export function StrategiaClient({
   }
 
   return (
-    <div className="flex flex-col gap-8 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Strategia — {setup.nome}</h1>
+    <div className="flex flex-col gap-6 p-6 md:p-8">
+      <AstaSubNav astaId={setup.id} nome={setup.nome} />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link href={`/strategia/${setup.id}/genera`} className="text-sm text-muted-foreground hover:text-foreground">
+          <h1 className="text-2xl font-bold tracking-tight">Strategia</h1>
+          <Link href={`/strategia/${setup.id}/genera`} className="text-sm text-primary hover:underline">
             Genera con IA
           </Link>
-          <Link href={`/asta/${setup.id}`} className="text-sm text-muted-foreground hover:text-foreground">
-            Torna all&apos;asta
-          </Link>
+        </div>
+        <div className="flex items-center gap-3">
           <Badge variant={salvata ? "secondary" : "outline"}>{salvata ? "salvato" : "modifiche non salvate"}</Badge>
           <Button size="sm" onClick={salva} disabled={pending || salvata}>
             {pending ? "Salvataggio…" : "Salva"}

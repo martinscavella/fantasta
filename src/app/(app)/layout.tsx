@@ -1,29 +1,18 @@
 import Link from "next/link";
+import { Gavel } from "lucide-react";
+import { NavBar } from "@/components/layout/nav-bar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="flex items-center gap-4 border-b border-border px-6 py-3">
-        <Link href="/" className="font-semibold">
+    <div className="flex min-h-svh flex-col bg-background">
+      <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/80 px-6 py-3 backdrop-blur-sm">
+        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Gavel className="size-4" />
+          </span>
           Fantasta
         </Link>
-        <nav className="flex gap-3 text-sm text-muted-foreground">
-          <Link href="/asta" className="hover:text-foreground">
-            Aste
-          </Link>
-          <Link href="/listone" className="hover:text-foreground">
-            Listone
-          </Link>
-          <Link href="/impostazioni/listone" className="hover:text-foreground">
-            Importa listone
-          </Link>
-          <Link href="/impostazioni/statistiche" className="hover:text-foreground">
-            Statistiche
-          </Link>
-          <Link href="/impostazioni/dossier" className="hover:text-foreground">
-            Dossier
-          </Link>
-        </nav>
+        <NavBar />
       </header>
       <main className="flex-1">{children}</main>
     </div>

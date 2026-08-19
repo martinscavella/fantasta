@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TeamsGrid } from "@/components/asta/teams-grid";
+import { AstaSubNav } from "@/components/asta/asta-sub-nav";
 import type { RigaRosa, StatoSquadraDerivato } from "@/lib/asta/derive";
 import { scostamentoStrategia, spesaPerRuolo } from "@/lib/riepilogo/scostamento";
 import { esportaAstaJson, esportaRosaCsv, scaricaFile } from "@/lib/riepilogo/export";
@@ -57,13 +57,10 @@ export function RiepilogoClient({
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Riepilogo — {setup.nome}</h1>
-        <Link href={`/asta/${setup.id}`} className="text-sm text-muted-foreground hover:text-foreground">
-          Torna all&apos;asta
-        </Link>
-      </div>
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6 md:p-8">
+      <AstaSubNav astaId={setup.id} nome={setup.nome} />
+
+      <h1 className="text-2xl font-bold tracking-tight">Riepilogo</h1>
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">

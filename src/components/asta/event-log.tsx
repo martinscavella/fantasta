@@ -37,13 +37,17 @@ export function EventLog({
   const ordinate = [...voci].sort((a, b) => b.ts - a.ts);
 
   if (ordinate.length === 0) {
-    return <p className="text-sm text-muted-foreground">Nessuna assegnazione ancora.</p>;
+    return (
+      <p className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground shadow-sm">
+        Nessuna assegnazione ancora.
+      </p>
+    );
   }
 
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex max-h-[60vh] flex-col gap-1 overflow-y-auto rounded-2xl border border-border bg-card p-2 shadow-sm">
       {ordinate.map((voce) => (
-        <li key={voce.eventId} className="flex items-center gap-2 rounded-lg border border-border/60 px-2 py-1.5 text-sm">
+        <li key={voce.eventId} className="flex h-8 items-center gap-2 rounded-lg px-2 text-sm hover:bg-accent/40">
           <span className="w-6 shrink-0 font-mono text-xs text-muted-foreground">{voce.player.ruolo}</span>
           <span className="flex-1 truncate">{voce.player.nome}</span>
           <span className="text-xs text-muted-foreground">{voce.teamNome}</span>
@@ -64,7 +68,11 @@ export function EventLog({
               }}
             >
               <Input name="price" type="number" min={0} defaultValue={voce.price} className="h-7 w-16" />
-              <Select name="teamId" defaultValue={voce.teamId}>
+              <Select
+                name="teamId"
+                defaultValue={voce.teamId}
+                items={Object.fromEntries(squadre.map((s) => [s.teamId, s.nome]))}
+              >
                 <SelectTrigger size="sm">
                   <SelectValue />
                 </SelectTrigger>
