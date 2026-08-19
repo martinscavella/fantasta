@@ -16,6 +16,9 @@ export async function salvaStrategia(astaId: string, strategyInput: StrategyDoc)
   return { ok: true, savedAt: parsed.data.updatedAt };
 }
 
+// Non esportato: un file "use server" può esportare solo funzioni async
+// (Next.js tratta ogni export come una server action) — vedi FALLBACK_VUOTO
+// duplicato in src/lib/actions/analisi-live.ts, che ne ha bisogno anche lui.
 const FALLBACK_VUOTO: Omit<StrategyDoc, "astaId"> = {
   fasce: [],
   budgetReparto: { P: 0, D: 0, C: 0, A: 0 },

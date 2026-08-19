@@ -11,18 +11,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fasciaStandard, prezzoMassimoDefault } from "@/lib/pricing";
-import type { Player, PrezzoMassimo, Ruolo } from "@/lib/blob/schemas";
+import { RUOLI, RUOLO_CLASSI } from "@/lib/ruoli";
+import type { Player, PrezzoMassimo } from "@/lib/blob/schemas";
 
 const TUTTI = "_tutti";
-const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
 
 export function PrezziMassimiTable({
   giocatori,
   prezziMassimi,
+  creditiBase,
   onChange,
 }: {
   giocatori: Player[];
   prezziMassimi: PrezzoMassimo[];
+  creditiBase: number;
   onChange: (prezzi: PrezzoMassimo[]) => void;
 }) {
   const [filtroRuolo, setFiltroRuolo] = useState<string>(TUTTI);
@@ -79,11 +81,11 @@ export function PrezziMassimiTable({
         <ul className="flex flex-col">
           {filtrati.slice(0, 150).map((g) => {
             const impostato = prezzoPerId.get(g.id);
-            const valore = impostato?.valore ?? prezzoMassimoDefault(g.quotazioneAttuale);
-            const fascia = fasciaStandard(g.quotazioneAttuale);
+            const valore = impostato?.valore ?? prezzoMassimoDefault(g.quotazioneAttuale, creditiBase);
+            const fascia = fasciaStandard(g.quotazioneAttuale, creditiBase);
             return (
-              <li key={g.id} className="flex items-center gap-2 border-b border-border/60 px-2 py-1.5 text-sm">
-                <span className="w-5 shrink-0 font-mono text-xs text-muted-foreground">{g.ruolo}</span>
+              <li key={g.id} className="flex items-center gap-2 border-b border-border/60 px-2 py-1.5 text-sm transition-colors hover:bg-accent/40">
+                <span className={`size-2 shrink-0 rounded-full ${RUOLO_CLASSI[g.ruolo].dot}`} title={g.ruolo} />
                 <span className="flex-1 truncate">{g.nome}</span>
                 <span className="text-xs text-muted-foreground">{g.squadra}</span>
                 {fascia && (
@@ -99,7 +101,7 @@ export function PrezziMassimiTable({
                   min={0}
                   value={valore}
                   onChange={(e) => imposta(g.id, Number(e.target.value))}
-                  className="h-7 w-20"
+                  className="h-7 w-20 font-mono"
                 />
                 <Badge variant={impostato?.origine === "manuale" ? "secondary" : "outline"} className="text-[10px]">
                   {impostato?.origine ?? "calcolato"}

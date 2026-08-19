@@ -4,9 +4,8 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GiocatorePicker } from "@/components/shared/giocatore-picker";
+import { RUOLI, RUOLO_CLASSI, RUOLO_LABEL } from "@/lib/ruoli";
 import type { ObiettivoSlot, Player, Ruolo, SlotPerRuolo } from "@/lib/blob/schemas";
-
-const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
 
 function chiave(ruolo: Ruolo, indice: number): string {
   return `${ruolo}-${indice}`;
@@ -46,7 +45,10 @@ export function SlotObiettiviEditor({
     <div className="flex flex-col gap-4">
       {RUOLI.filter((r) => slot[r] > 0).map((ruolo) => (
         <div key={ruolo} className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">{ruolo}</h3>
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+            <span className={`size-2 rounded-full ${RUOLO_CLASSI[ruolo].dot}`} />
+            {RUOLO_LABEL[ruolo]}
+          </h3>
           {Array.from({ length: slot[ruolo] }, (_, indice) => {
             const obiettivo = perChiave.get(chiave(ruolo, indice));
             const usati = new Set(

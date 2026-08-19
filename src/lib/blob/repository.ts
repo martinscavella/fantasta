@@ -2,6 +2,7 @@ import { get, put, BlobPreconditionFailedError } from "@vercel/blob";
 import type { z, ZodType } from "zod";
 import {
   AliasesDocSchema,
+  AnalisiLiveDocSchema,
   AsteIndexSchema,
   BoardDocSchema,
   DebriefDocSchema,
@@ -14,6 +15,7 @@ import {
   StatsIndexSchema,
   StrategyDocSchema,
   type AliasesDoc,
+  type AnalisiLiveDoc,
   type AsteIndex,
   type BoardDoc,
   type DebriefDoc,
@@ -142,6 +144,7 @@ const paths = {
   board: (astaId: string) => `aste/${astaId}/board.json`,
   dossier: (stagione: string) => `dossier/${stagione}.json`,
   debrief: (astaId: string) => `aste/${astaId}/debrief.json`,
+  analisiLive: (astaId: string) => `aste/${astaId}/analisi-live.json`,
 } as const;
 
 export function getListone(stagione: string, versionId: string) {
@@ -218,6 +221,18 @@ export function putSetup(doc: SetupDoc) {
   return writeDoc(paths.setup(doc.id), SetupDocSchema, doc);
 }
 
+/**
+ * Legge → muta → scrive con retry su conflitto (vedi updateDoc). A differenza
+ * di updateStrategy/updateBoard non c'è un fallback sintetico: un SetupDoc
+ * deve già esistere (creato da creaAsta) prima di poterlo aggiornare — se non
+ * esiste, `null` segnala all'action chiamante di rispondere "asta non trovata".
+ */
+export async function updateSetup(astaId: string, mutate: (current: SetupDoc) => SetupDoc): Promise<SetupDoc | null> {
+  const existing = await getSetup(astaId);
+  if (!existing) return null;
+  return updateDoc(paths.setup(astaId), SetupDocSchema, existing.data, mutate);
+}
+
 export function getStrategy(astaId: string) {
   return readDoc(paths.strategy(astaId), StrategyDocSchema);
 }
@@ -248,4 +263,12 @@ export function getDebrief(astaId: string) {
 
 export function putDebrief(doc: DebriefDoc) {
   return writeDoc(paths.debrief(doc.astaId), DebriefDocSchema, doc);
+}
+
+export function getAnalisiLive(astaId: string) {
+  return readDoc(paths.analisiLive(astaId), AnalisiLiveDocSchema);
+}
+
+export function putAnalisiLive(doc: AnalisiLiveDoc) {
+  return writeDoc(paths.analisiLive(doc.astaId), AnalisiLiveDocSchema, doc);
 }

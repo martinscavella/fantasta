@@ -134,8 +134,9 @@ describe("derivaInflazione", () => {
     const state = stato({ e1: { playerId: 1, teamId: "t1", price: 15 } });
 
     const risultato = derivaInflazione(state, s, giocatori, events);
-    expect(risultato.teorica).not.toBeNull(); // 85 crediti residui / 10 di quotazione libera
-    expect(risultato.osservata).toBe(1.5); // 15/10
+    expect(risultato.teorica).not.toBeNull(); // 85 crediti residui / 10 di quotazione libera, normalizzato sulla scala budget
+    // rapporto grezzo 15/10 = 1.5, normalizzato per fattoreScalaBudget(100) = 100/500 = 0.2 -> 1.5/0.2 = 7.5
+    expect(risultato.osservata).toBe(7.5);
     expect(risultato.effettiva).toBe(risultato.teorica);
   });
 
@@ -151,8 +152,9 @@ describe("derivaInflazione", () => {
 
     const risultato = derivaInflazione(state, s, giocatori, events);
     expect(risultato.teorica).toBeNull();
-    expect(risultato.osservata).toBe(2);
-    expect(risultato.effettiva).toBe(2);
+    // rapporto grezzo 20/10 = 2, normalizzato per fattoreScalaBudget(100) = 0.2 -> 2/0.2 = 10
+    expect(risultato.osservata).toBe(10);
+    expect(risultato.effettiva).toBe(10);
   });
 
   it("a inizio asta (nessun acquisto), osservata è null ma teorica è comunque calcolabile", () => {
@@ -160,7 +162,9 @@ describe("derivaInflazione", () => {
     const giocatori = [giocatore(1, "P")];
     const risultato = derivaInflazione(stato({}), s, giocatori, []);
     expect(risultato.osservata).toBeNull();
-    expect(risultato.teorica).toBe(10); // 100 crediti residui / 10 di quotazione
+    // rapporto grezzo 100 crediti residui / 10 di quotazione = 10, normalizzato per
+    // fattoreScalaBudget(100) = 0.2 -> 10/0.2 = 50
+    expect(risultato.teorica).toBe(50);
   });
 
   it("a fine asta (nessun giocatore libero), teorica è null", () => {

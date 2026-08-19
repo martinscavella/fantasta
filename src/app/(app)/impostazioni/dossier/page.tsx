@@ -1,28 +1,21 @@
-import { getDossier, getListone, getListoneIndex } from "@/lib/blob/repository";
+import { getAsteIndex, getDossier, getListone, getListoneIndex } from "@/lib/blob/repository";
 import { DossierClient } from "@/components/impostazioni/dossier-client";
+import { PageHeader } from "@/components/shared/page-header";
+import { StagioneList } from "@/components/shared/stagione-list";
 
 export default async function DossierPage({ searchParams }: PageProps<"/impostazioni/dossier">) {
   const { stagione } = await searchParams;
 
   if (!stagione) {
+    const asteIndex = await getAsteIndex();
+    const stagioni = [...new Set((asteIndex?.data.aste ?? []).map((a) => a.stagione))];
     return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-4 text-xl font-semibold">Dossier giocatori</h1>
-        <form className="flex flex-col gap-3">
-          <label className="text-sm text-muted-foreground" htmlFor="stagione">
-            Stagione
-          </label>
-          <input
-            id="stagione"
-            name="stagione"
-            placeholder="es. 2026-27"
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
-          />
-          <button type="submit" className="h-8 rounded-lg bg-primary text-sm text-primary-foreground">
-            Apri
-          </button>
-        </form>
-      </div>
+      <StagioneList
+        stagioni={stagioni}
+        hrefPrefix="/impostazioni/dossier"
+        title="Dossier giocatori"
+        description="Genera schede giocatore (punti di forza, rischio infortuni, prezzo consigliato) via il ponte manuale con Claude — pochi blocchi copia-incolla, una volta a stagione."
+      />
     );
   }
 
@@ -50,11 +43,10 @@ export default async function DossierPage({ searchParams }: PageProps<"/impostaz
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
-      <h1 className="text-xl font-semibold">Dossier giocatori — {stagioneValue}</h1>
-      <p className="text-sm text-muted-foreground">
-        I dossier valgono per entrambe le leghe (gli stessi giocatori di Serie A, cambiano solo quotazioni e regole)
-        — vanno generati una volta a stagione.
-      </p>
+      <PageHeader
+        title={`Dossier giocatori — ${stagioneValue}`}
+        description="I dossier valgono per entrambe le leghe (gli stessi giocatori di Serie A, cambiano solo quotazioni e regole) — vanno generati una volta a stagione."
+      />
       <DossierClient
         stagione={stagioneValue}
         giocatori={listone?.data.giocatori ?? []}

@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RUOLI, RUOLO_CLASSI } from "@/lib/ruoli";
+import { RUOLI, RUOLO_CLASSI, RUOLO_LABEL } from "@/lib/ruoli";
 import { cn } from "@/lib/utils";
 import type { BoardEvent, Player, PlayerStats, PrezzoMassimo, Ruolo, SetupDoc } from "@/lib/blob/schemas";
 
@@ -128,11 +128,11 @@ export function AstaClient({
   const prezzoReattivoPerId = useMemo(() => {
     const mappa = new Map<number, number>();
     for (const g of giocatori) {
-      const base = prezzoBasePerId.get(g.id) ?? prezzoMassimoDefault(g.quotazioneAttuale);
+      const base = prezzoBasePerId.get(g.id) ?? prezzoMassimoDefault(g.quotazioneAttuale, setup.creditiBase);
       mappa.set(g.id, prezzoReattivo(base, inflazione.effettiva));
     }
     return mappa;
-  }, [giocatori, prezzoBasePerId, inflazione.effettiva]);
+  }, [giocatori, prezzoBasePerId, inflazione.effettiva, setup.creditiBase]);
 
   const assegnatiIds = useMemo(
     () => new Set(Object.values(astaState.assegnazioni).map((a) => a.playerId)),
@@ -143,7 +143,7 @@ export function AstaClient({
   const liberiFiltrati = useMemo(() => {
     const filtrati = giocatoriLiberi.filter((g) => {
       if (filtroRuolo !== TUTTI && g.ruolo !== filtroRuolo) return false;
-      if (filtroFascia !== TUTTI && fasciaStandard(g.quotazioneAttuale) !== filtroFascia) return false;
+      if (filtroFascia !== TUTTI && fasciaStandard(g.quotazioneAttuale, setup.creditiBase) !== filtroFascia) return false;
       return true;
     });
     const ordinati = [...filtrati];
@@ -165,7 +165,7 @@ export function AstaClient({
         break;
     }
     return ordinati;
-  }, [giocatoriLiberi, filtroRuolo, filtroFascia, ordinamento, statsPerPlayerId, prezzoReattivoPerId]);
+  }, [giocatoriLiberi, filtroRuolo, filtroFascia, ordinamento, statsPerPlayerId, prezzoReattivoPerId, setup.creditiBase]);
 
   // Non si azzera mai a un cambio filtro con un effetto (vietato — vedi
   // AGENTS.md): si tronca alla lunghezza corrente calcolandolo qui, così
@@ -299,14 +299,18 @@ export function AstaClient({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [fase.tipo]);
 
-  const statoLabel = { salvato: "salvato", salvataggio: "salvataggio…", offline: "offline" }[syncStatus];
+  const statoLabel = {
+    salvato: "dati salvati",
+    salvataggio: "salvataggio…",
+    offline: "offline — dati al sicuro in locale",
+  }[syncStatus];
   const statoClasse = {
     salvato: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     salvataggio: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
     offline: "bg-muted text-muted-foreground",
   }[syncStatus];
   const creditiTotaliLega = setup.squadre.length * setup.creditiBase;
-  const fasciaCorrente = giocatoreCorrente ? fasciaStandard(giocatoreCorrente.quotazioneAttuale) : null;
+  const fasciaCorrente = giocatoreCorrente ? fasciaStandard(giocatoreCorrente.quotazioneAttuale, setup.creditiBase) : null;
   const statsCorrente = giocatoreCorrente ? statsPerPlayerId.get(giocatoreCorrente.id) : undefined;
 
   return (
@@ -335,10 +339,10 @@ export function AstaClient({
                 Inflazione <span className="font-mono font-bold">{inflazione.effettiva.toFixed(2)}×</span>
               </span>
             )}
-            <Badge className={cn("gap-1.5 border-transparent px-3 py-1.5 text-xs", statoClasse)}>
+            <Badge className={cn("gap-1.5 border-transparent px-3 py-1.5 text-xs font-medium", statoClasse)}>
               <span
                 className={cn(
-                  "size-1.5 rounded-full bg-current",
+                  "size-2 rounded-full bg-current",
                   syncStatus === "salvataggio" && "animate-pulse",
                 )}
               />
@@ -412,6 +416,8 @@ export function AstaClient({
                 <button
                   key={r}
                   type="button"
+                  title={RUOLO_LABEL[r]}
+                  aria-label={RUOLO_LABEL[r]}
                   onClick={() => {
                     setFiltroRuolo(r);
                     setCursore(0);
@@ -476,8 +482,11 @@ export function AstaClient({
           ) : (
             <div className="animate-in fade-in-0 flex flex-col gap-4 rounded-2xl border-2 border-primary/25 bg-card p-5 shadow-md duration-150">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-xs text-muted-foreground">
-                  {cursoreValido + 1} di {liberiFiltrati.length}
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-semibold text-primary">Passo 1/3 · Scegli</span>
+                  <span className="font-mono">
+                    {cursoreValido + 1} di {liberiFiltrati.length}
+                  </span>
                 </span>
                 {fasciaCorrente && <Badge variant={FASCIA_BADGE_VARIANT[fasciaCorrente]}>{fasciaCorrente}</Badge>}
               </div>
@@ -551,6 +560,7 @@ export function AstaClient({
             confermaPrezzo(prezzo);
           }}
         >
+          <span className="text-xs font-semibold text-primary">Passo 2/3 · Prezzo</span>
           <div className="flex items-center gap-2">
             <span
               className={cn(
@@ -582,6 +592,7 @@ export function AstaClient({
 
       {fase.tipo === "squadra" && (
         <div className="animate-in fade-in-0 slide-in-from-top-2 flex flex-col gap-3 rounded-2xl border-2 border-primary/25 bg-card p-4 shadow-md duration-200">
+          <span className="text-xs font-semibold text-primary">Passo 3/3 · Squadra</span>
           <div className="flex items-center gap-2">
             <span
               className={cn(

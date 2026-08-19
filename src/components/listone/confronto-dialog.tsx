@@ -29,10 +29,10 @@ export function ConfrontoDialog({
         {giocatori.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nessun giocatore selezionato.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
+                <tr className="border-b border-border bg-muted/60">
                   <th className="px-2 py-2 text-left font-medium text-muted-foreground"></th>
                   {giocatori.map((g) => {
                     const fascia = fasciaStandard(g.quotazioneAttuale);

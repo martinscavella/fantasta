@@ -1,17 +1,30 @@
 "use client";
 
 import { useState } from "react";
+import { Download, MessageSquare, TrendingUp, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TeamsGrid } from "@/components/asta/teams-grid";
 import { AstaSubNav } from "@/components/asta/asta-sub-nav";
+import { AiCallout } from "@/components/shared/ai-callout";
+import { PageHeader } from "@/components/shared/page-header";
+import { SectionCard } from "@/components/shared/section-card";
+import { RUOLO_CLASSI } from "@/lib/ruoli";
 import type { RigaRosa, StatoSquadraDerivato } from "@/lib/asta/derive";
 import { scostamentoStrategia, spesaPerRuolo } from "@/lib/riepilogo/scostamento";
 import { esportaAstaJson, esportaRosaCsv, scaricaFile } from "@/lib/riepilogo/export";
 import { buildPromptDebrief } from "@/lib/ai/prompts/debrief";
 import { salvaDebrief } from "@/lib/actions/debrief";
 import type { SetupDoc, StrategyDoc } from "@/lib/blob/schemas";
+
+// Solo lo sforamento (speso più del pianificato) è un segnale d'attenzione:
+// spendere meno del preventivato è la norma per gran parte dell'asta (reparti
+// non ancora affrontati, margine lasciato apposta), non va colorato come se
+// fosse un problema — altrimenti a inizio asta l'intera pagina è ambra.
+function classeScostamento(scostamento: number): string {
+  return scostamento > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground";
+}
 
 export function RiepilogoClient({
   setup,
@@ -57,118 +70,159 @@ export function RiepilogoClient({
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6 md:p-8">
+    <div className="flex flex-col gap-6 p-6 md:p-8">
       <AstaSubNav astaId={setup.id} nome={setup.nome} />
 
-      <h1 className="text-2xl font-bold tracking-tight">Riepilogo</h1>
+      <PageHeader title="Riepilogo" description="La tua rosa finale, lo scostamento dalla strategia e il confronto con tutta la lega." />
 
-      <section className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">La tua rosa — {nomeMiaSquadra}</h2>
-          <span className="font-mono text-sm">{spesaTotale} crediti spesi</span>
-        </div>
-        <div className="rounded-xl border border-border">
-          <ul className="flex flex-col">
-            {rosaMia.length === 0 ? (
-              <li className="p-3 text-sm text-muted-foreground">Nessun giocatore acquistato.</li>
-            ) : (
-              rosaMia.map((r) => (
-                <li key={r.eventId} className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5 text-sm">
-                  <span className="w-5 shrink-0 font-mono text-xs text-muted-foreground">{r.player.ruolo}</span>
-                  <span className="flex-1 truncate">{r.player.nome}</span>
-                  <span className="text-xs text-muted-foreground">{r.player.squadra}</span>
-                  <span className="w-10 text-right font-mono">{r.price}</span>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-muted-foreground">Scostamento dalla strategia pianificata</h2>
-        {scostamento ? (
-          <div className="grid grid-cols-4 gap-3 text-sm">
-            {scostamento.map((s) => (
-              <div key={s.ruolo} className="flex flex-col gap-1 rounded-xl border border-border p-2">
-                <span className="text-xs text-muted-foreground">{s.ruolo}</span>
-                <span className="font-mono">
-                  {s.effettivo} / {s.pianificato}
-                </span>
-                <span className={s.scostamento > 0 ? "font-mono text-xs text-destructive" : "font-mono text-xs text-muted-foreground"}>
-                  {s.scostamento > 0 ? "+" : ""}
-                  {s.scostamento}
-                </span>
-              </div>
-            ))}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <SectionCard
+          title={`La tua rosa — ${nomeMiaSquadra}`}
+          icon={Users}
+          actions={<span className="font-mono text-sm font-semibold">{spesaTotale} crediti spesi</span>}
+        >
+          <div className="overflow-hidden rounded-xl border border-border">
+            <ul className="flex flex-col">
+              {rosaMia.length === 0 ? (
+                <li className="p-3 text-sm text-muted-foreground">Nessun giocatore acquistato.</li>
+              ) : (
+                rosaMia.map((r) => (
+                  <li
+                    key={r.eventId}
+                    className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5 text-sm transition-colors last:border-b-0 hover:bg-accent/40"
+                  >
+                    <span className={`size-2 shrink-0 rounded-full ${RUOLO_CLASSI[r.player.ruolo].dot}`} title={r.player.ruolo} />
+                    <span className="flex-1 truncate">{r.player.nome}</span>
+                    <span className="text-xs text-muted-foreground">{r.player.squadra}</span>
+                    <span className="w-10 text-right font-mono">{r.price}</span>
+                  </li>
+                ))
+              )}
+            </ul>
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Nessuna strategia pianificata registrata per questa asta.</p>
-        )}
-      </section>
+        </SectionCard>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-muted-foreground">Tutte le squadre</h2>
+        <SectionCard title="Scostamento dalla strategia pianificata" icon={TrendingUp}>
+          {scostamento ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {scostamento.map((s) => {
+                const pct = s.pianificato > 0 ? Math.min(100, (s.effettivo / s.pianificato) * 100) : 0;
+                return (
+                  <div key={s.ruolo} className="flex flex-col gap-1.5 rounded-lg border border-border/60 p-2.5">
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <span className={`size-2 rounded-full ${RUOLO_CLASSI[s.ruolo].dot}`} />
+                      {s.ruolo}
+                    </span>
+                    <span className="font-mono text-sm">
+                      {s.effettivo} <span className="text-muted-foreground">/ {s.pianificato}</span>
+                    </span>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full rounded-full transition-all ${s.scostamento > 0 ? "bg-rose-500" : RUOLO_CLASSI[s.ruolo].dot}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className={`font-mono text-xs ${classeScostamento(s.scostamento)}`}>
+                      {s.scostamento > 0 ? "+" : ""}
+                      {s.scostamento}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nessuna strategia pianificata registrata per questa asta.</p>
+          )}
+        </SectionCard>
+      </div>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Users className="size-4" />
+          </span>
+          <h2 className="text-base font-semibold tracking-tight">Tutte le squadre</h2>
+        </div>
         <TeamsGrid squadre={squadreDerivate} rose={rose} />
       </section>
 
-      <section className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => scaricaFile(`${setup.nome}-rosa.csv`, esportaRosaCsv(rosaMia), "text/csv")}
-        >
-          Esporta CSV
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => scaricaFile(`${setup.nome}-rosa.json`, esportaAstaJson(setup.nome, rosaMia), "application/json")}
-        >
-          Esporta JSON
-        </Button>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium text-muted-foreground">Debrief IA</h2>
-        <p className="text-sm text-muted-foreground">
-          Genera il prompt, incollalo in una chat Claude e riporta qui la risposta in prosa — non serve nessuna
-          validazione, è solo testo da leggere.
-        </p>
-        {!prompt && (
-          <Button type="button" size="sm" onClick={generaPromptDebrief}>
-            Genera prompt
-          </Button>
-        )}
-        {prompt && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Prompt</span>
-              <Button type="button" size="xs" variant="outline" onClick={() => void copiaPrompt()}>
-                {copiato ? "Copiato" : "Copia prompt"}
-              </Button>
-            </div>
-            <Textarea readOnly value={prompt} rows={8} className="font-mono text-xs" />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <SectionCard title="Esporta" icon={Download}>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => scaricaFile(`${setup.nome}-rosa.csv`, esportaRosaCsv(rosaMia), "text/csv")}
+            >
+              <Download />
+              Esporta CSV
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => scaricaFile(`${setup.nome}-rosa.json`, esportaAstaJson(setup.nome, rosaMia), "application/json")}
+            >
+              <Download />
+              Esporta JSON
+            </Button>
           </div>
-        )}
-        <Textarea
-          placeholder="Incolla qui il debrief…"
-          rows={8}
-          value={debriefTesto}
-          onChange={(e) => {
-            setDebriefTesto(e.target.value);
-            setSalvato(false);
-          }}
-        />
-        <div className="flex items-center gap-2">
-          <Button type="button" size="sm" onClick={() => void salva()} disabled={pending || salvato}>
-            {pending ? "Salvataggio…" : "Salva debrief"}
-          </Button>
-          {salvato && debriefTesto && <Badge variant="secondary">salvato</Badge>}
-        </div>
-      </section>
+        </SectionCard>
+
+        <SectionCard
+          title="Debrief IA"
+          description="Genera il prompt, incollalo in una chat Claude e riporta qui la risposta in prosa — non serve nessuna validazione, è solo testo da leggere."
+          icon={MessageSquare}
+        >
+          {salvato && debriefTesto ? (
+            <AiCallout
+              label="Debrief salvato"
+              testo={debriefTesto}
+              actions={
+                <Button type="button" size="xs" variant="outline" onClick={() => setSalvato(false)}>
+                  Modifica
+                </Button>
+              }
+            />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {!prompt && (
+                <Button type="button" size="sm" className="w-fit" onClick={generaPromptDebrief}>
+                  Genera prompt
+                </Button>
+              )}
+              {prompt && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Prompt</span>
+                    <Button type="button" size="xs" variant="outline" onClick={() => void copiaPrompt()}>
+                      {copiato ? "Copiato" : "Copia prompt"}
+                    </Button>
+                  </div>
+                  <Textarea readOnly value={prompt} rows={8} className="max-h-72 overflow-y-auto font-mono text-xs" />
+                </div>
+              )}
+              <Textarea
+                placeholder="Incolla qui il debrief…"
+                rows={8}
+                className="max-h-96 overflow-y-auto text-[0.95rem] leading-relaxed"
+                value={debriefTesto}
+                onChange={(e) => {
+                  setDebriefTesto(e.target.value);
+                  setSalvato(false);
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" onClick={() => void salva()} disabled={pending || salvato}>
+                  {pending ? "Salvataggio…" : "Salva debrief"}
+                </Button>
+                {salvato && debriefTesto && <Badge variant="secondary">salvato</Badge>}
+              </div>
+            </div>
+          )}
+        </SectionCard>
+      </div>
     </div>
   );
 }

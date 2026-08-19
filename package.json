@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "scrape": "tsx --env-file=.env.local scripts/scrape/index.ts"
+    "scrape": "tsx --env-file=.env.local scripts/scrape/index.ts",
+    "calibra:analisi-live": "tsx scripts/analisi-live/calibra.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

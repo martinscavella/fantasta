@@ -42,10 +42,11 @@ export function TeamsGrid({
   flashTeamId?: string | null;
 }) {
   const modalitaAssegnazione = eleggibilita != null;
+  const modalitaSforo = squadre.some((t) => t.massimaOfferta === null);
 
   return (
-    <div className="w-fit max-w-full overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
-      <div className="flex">
+    <div className="w-fit max-w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="flex overflow-x-auto">
         {squadre.map((team) => {
           const pctSpeso = team.creditiBase > 0 ? Math.min(100, (team.creditiSpesi / team.creditiBase) * 100) : 0;
           const righeRosa = rose[team.teamId] ?? [];
@@ -166,6 +167,21 @@ export function TeamsGrid({
           );
         })}
       </div>
+      <p className="border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground">
+        {modalitaSforo ? (
+          <>
+            <span className="font-semibold text-rose-600 dark:text-rose-400">Sforo</span> = crediti spesi oltre il
+            budget base, pagati a parte
+          </>
+        ) : (
+          <>
+            <span className="font-semibold text-primary">Max</span> = offerta massima possibile su questo giocatore
+            senza far saltare gli slot rimasti
+          </>
+        )}
+        {" · "}bordo ambra sul ruolo = squadra obbligata a comprarlo (slot residui = liberi rimasti)
+        {" · "}— = slot ancora libero
+      </p>
     </div>
   );
 }

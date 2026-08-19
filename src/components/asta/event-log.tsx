@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -47,14 +48,20 @@ export function EventLog({
   return (
     <ul className="flex max-h-[60vh] flex-col gap-1 overflow-y-auto rounded-2xl border border-border bg-card p-2 shadow-sm">
       {ordinate.map((voce) => (
-        <li key={voce.eventId} className="flex h-8 items-center gap-2 rounded-lg px-2 text-sm hover:bg-accent/40">
+        <li
+          key={voce.eventId}
+          className={cn(
+            "flex items-center gap-2 rounded-lg px-2 text-sm hover:bg-accent/40",
+            inModifica === voce.eventId ? "flex-wrap gap-y-1.5 py-1.5" : "h-8",
+          )}
+        >
           <span className="w-6 shrink-0 font-mono text-xs text-muted-foreground">{voce.player.ruolo}</span>
           <span className="flex-1 truncate">{voce.player.nome}</span>
           <span className="text-xs text-muted-foreground">{voce.teamNome}</span>
 
           {inModifica === voce.eventId ? (
             <form
-              className="flex items-center gap-1"
+              className="flex flex-1 flex-wrap items-center gap-1.5 basis-full justify-end"
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = new FormData(e.currentTarget);
@@ -88,7 +95,7 @@ export function EventLog({
                 Salva
               </Button>
               <Button type="button" size="xs" variant="ghost" onClick={() => setInModifica(null)}>
-                Annulla
+                Chiudi
               </Button>
             </form>
           ) : (
@@ -97,8 +104,8 @@ export function EventLog({
               <Button size="xs" variant="ghost" onClick={() => setInModifica(voce.eventId)}>
                 Modifica
               </Button>
-              <Button size="xs" variant="ghost" onClick={() => onUndo(voce.eventId)}>
-                Annulla
+              <Button size="xs" variant="ghost" title="Annulla questa assegnazione: il giocatore torna libero" onClick={() => onUndo(voce.eventId)}>
+                Rimuovi
               </Button>
             </>
           )}

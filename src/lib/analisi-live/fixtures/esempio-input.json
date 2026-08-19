@@ -1,0 +1,238 @@
+{
+  "lega": {
+    "nSquadre": 10,
+    "budget": 1100,
+    "slot": {
+      "P": 3,
+      "D": 8,
+      "C": 8,
+      "A": 6
+    },
+    "modalita": "classic",
+    "budgetChiuso": true,
+    "regolePunteggio": {
+      "modificatoreDifesa": true,
+      "portiereImbattuto": true,
+      "golVittoria": true
+    }
+  },
+  "fase": "dopo-P",
+  "ordineReparti": [
+    "P",
+    "D",
+    "C",
+    "A"
+  ],
+  "miaSquadra": {
+    "nome": "Io",
+    "creditiResiduiDichiarati": 979,
+    "rosa": [
+      {
+        "playerId": 5841,
+        "prezzoPagato": 102
+      },
+      {
+        "playerId": 2134,
+        "prezzoPagato": 14
+      },
+      {
+        "playerId": 5876,
+        "prezzoPagato": 5
+      }
+    ]
+  },
+  "avversari": [
+    {
+      "nome": "Rossi FC",
+      "creditiResiduiDichiarati": 989,
+      "rosa": [
+        {
+          "playerId": 6966,
+          "prezzoPagato": 88
+        },
+        {
+          "playerId": 4360,
+          "prezzoPagato": 22
+        },
+        {
+          "playerId": 5514,
+          "prezzoPagato": 1
+        }
+      ]
+    },
+    {
+      "nome": "Bianchi Team",
+      "creditiResiduiDichiarati": 994,
+      "rosa": [
+        {
+          "playerId": 5116,
+          "prezzoPagato": 79
+        },
+        {
+          "playerId": 6482,
+          "prezzoPagato": 18
+        },
+        {
+          "playerId": 133,
+          "prezzoPagato": 9
+        }
+      ]
+    },
+    {
+      "nome": "Verdi United",
+      "creditiResiduiDichiarati": 992,
+      "rosa": [
+        {
+          "playerId": 4312,
+          "prezzoPagato": 71
+        },
+        {
+          "playerId": 572,
+          "prezzoPagato": 25
+        },
+        {
+          "playerId": 6462,
+          "prezzoPagato": 12
+        }
+      ]
+    },
+    {
+      "nome": "Neri Calcio",
+      "creditiResiduiDichiarati": 936,
+      "rosa": [
+        {
+          "playerId": 4431,
+          "prezzoPagato": 66
+        },
+        {
+          "playerId": 2521,
+          "prezzoPagato": 40
+        },
+        {
+          "playerId": 4964,
+          "prezzoPagato": 58
+        }
+      ]
+    }
+  ],
+  "listoneDisponibili": [
+    {
+      "id": 254,
+      "ruolo": "D",
+      "nome": "Dimarco",
+      "club": "Inter",
+      "quotazione": 32
+    },
+    {
+      "id": 4998,
+      "ruolo": "D",
+      "nome": "Molina N.",
+      "club": "Roma",
+      "quotazione": 18
+    },
+    {
+      "id": 7181,
+      "ruolo": "D",
+      "nome": "Wesley",
+      "club": "Roma",
+      "quotazione": 17
+    },
+    {
+      "id": 4159,
+      "ruolo": "D",
+      "nome": "Akanji",
+      "club": "Inter",
+      "quotazione": 16
+    },
+    {
+      "id": 2788,
+      "ruolo": "D",
+      "nome": "Bremer",
+      "club": "Juventus",
+      "quotazione": 15
+    },
+    {
+      "id": 2296,
+      "ruolo": "D",
+      "nome": "Mancini",
+      "club": "Roma",
+      "quotazione": 15
+    },
+    {
+      "id": 5641,
+      "ruolo": "D",
+      "nome": "Chalobah T.",
+      "club": "Como",
+      "quotazione": 9
+    },
+    {
+      "id": 6869,
+      "ruolo": "D",
+      "nome": "Ramon",
+      "club": "Como",
+      "quotazione": 10
+    },
+    {
+      "id": 2816,
+      "ruolo": "D",
+      "nome": "Di Lorenzo",
+      "club": "Napoli",
+      "quotazione": 12
+    },
+    {
+      "id": 6496,
+      "ruolo": "D",
+      "nome": "Bartesaghi",
+      "club": "Milan",
+      "quotazione": 8
+    }
+  ],
+  "pianoIniziale": {
+    "budgetReparto": {
+      "P": 120,
+      "D": 330,
+      "C": 380,
+      "A": 270
+    },
+    "prezziMassimi": [
+      {
+        "playerId": 7181,
+        "valore": 80
+      },
+      {
+        "playerId": 254,
+        "valore": 110
+      },
+      {
+        "playerId": 4159,
+        "valore": 62
+      }
+    ],
+    "slotObiettivi": [
+      {
+        "ruolo": "D",
+        "indiceSlot": 0,
+        "obiettivoPrincipale": 7181,
+        "alternative": [
+          254,
+          4998,
+          4159
+        ]
+      }
+    ],
+    "fasce": [],
+    "sintesi": "vedi piano completo"
+  },
+  "vincoli": {
+    "esclusi": [
+      4312
+    ],
+    "obbligatori": [
+      152,
+      7126,
+      4871
+    ],
+    "stile": "modificatore difesa + centrocampo forte",
+    "rischio": "safe con 1-2 scommesse per reparto"
+  }
+}

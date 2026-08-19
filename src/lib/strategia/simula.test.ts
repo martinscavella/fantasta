@@ -81,15 +81,18 @@ describe("simulaRosa — prezzo", () => {
     expect(risultato.spesaTotale).toBe(25);
   });
 
-  it("ricade sulla quotazione attuale se non c'è un prezzo massimo impostato", () => {
+  it("ricade sulla quotazione attuale scalata sul budget di lega se non c'è un prezzo massimo impostato", () => {
+    // creditiBase 100 = 1/5 del budget standard (500) a cui è tarato il listone:
+    // quotazione 10 -> prezzo di default 10 * (100/500) = 2.
     const giocatori = [giocatore(1, "P", 10)];
     const s = strategy({ slotObiettivi: [{ ruolo: "P", indiceSlot: 0, obiettivoPrincipale: 1, alternative: [] }] });
     const risultato = simulaRosa(setup(), giocatori, s);
-    expect(risultato.slot[0].prezzo).toBe(10);
+    expect(risultato.slot[0].prezzo).toBe(2);
   });
 
-  it("entroBudget è false quando la spesa totale supera i crediti base", () => {
-    const giocatori = [giocatore(1, "P", 150)];
+  it("entroBudget è false quando la spesa totale (scalata sul budget di lega) supera i crediti base", () => {
+    // quotazione 600 * (100/500) = 120, sopra i 100 crediti di questa lega.
+    const giocatori = [giocatore(1, "P", 600)];
     const s = strategy({ slotObiettivi: [{ ruolo: "P", indiceSlot: 0, obiettivoPrincipale: 1, alternative: [] }] });
     const risultato = simulaRosa(setup({ creditiBase: 100 }), giocatori, s);
     expect(risultato.entroBudget).toBe(false);

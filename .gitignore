@@ -13,6 +13,10 @@
 # testing
 /coverage
 
+# cache locale (scraping § PLAN.md, ricerca web di analisi-live) e storico calibrazione
+/.cache
+/.data
+
 # next.js
 /.next/
 /out/

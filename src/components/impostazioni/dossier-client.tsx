@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { SectionCard } from "@/components/shared/section-card";
 import { costruisciBlocchi, buildPromptDossier, type BloccoDossier } from "@/lib/ai/prompts/dossier";
 import { DossierBloccoGeneratoSchema } from "@/lib/ai/schemas";
 import { importaRisposta } from "@/lib/ai/importa";
@@ -70,28 +72,32 @@ function BloccoDossierItem({
       </button>
 
       {aperto && (
-        <div className="flex flex-col gap-3 border-t border-border p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              {blocco.giocatori.map((g) => g.nome).join(", ")}
-            </span>
-            <Button type="button" size="xs" variant="outline" onClick={() => void copia()}>
-              {copiato ? "Copiato" : "Copia prompt"}
+        <div className="flex flex-col gap-4 border-t border-border p-3">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase">1. Copia il prompt</span>
+              <Button type="button" size="xs" variant="outline" onClick={() => void copia()}>
+                {copiato ? "Copiato" : "Copia prompt"}
+              </Button>
+            </div>
+            <span className="text-xs text-muted-foreground">{blocco.giocatori.map((g) => g.nome).join(", ")}</span>
+            {prompt && <Textarea readOnly value={prompt} rows={6} className="max-h-72 overflow-y-auto font-mono text-xs" />}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-muted-foreground uppercase">2. Incolla la risposta</span>
+            <Textarea
+              placeholder="Incolla qui il JSON che Claude ha risposto…"
+              rows={6}
+              className="max-h-72 overflow-y-auto font-mono text-xs"
+              value={risposta}
+              onChange={(e) => setRisposta(e.target.value)}
+            />
+            {errore && <p className="text-sm text-destructive">{errore}</p>}
+            <Button type="button" size="sm" onClick={() => void valida()} disabled={pending || !risposta.trim()} className="self-start">
+              {pending ? "Salvataggio…" : "Valida e salva"}
             </Button>
           </div>
-          {prompt && <Textarea readOnly value={prompt} rows={6} className="font-mono text-xs" />}
-
-          <Textarea
-            placeholder="Incolla qui la risposta…"
-            rows={6}
-            className="font-mono text-xs"
-            value={risposta}
-            onChange={(e) => setRisposta(e.target.value)}
-          />
-          {errore && <p className="text-sm text-destructive">{errore}</p>}
-          <Button type="button" size="sm" onClick={() => void valida()} disabled={pending || !risposta.trim()}>
-            {pending ? "Salvataggio…" : "Valida e salva"}
-          </Button>
         </div>
       )}
     </li>
@@ -113,7 +119,20 @@ export function DossierClient({
   const totaleFatti = giocatori.filter((g) => importati.has(g.id)).length;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
+      <SectionCard title="Come funziona" icon={Copy}>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Ogni blocco qui sotto copre ~25 giocatori. Per ciascuno: apri il blocco, <strong className="text-foreground">Copia prompt</strong>,
+          incollalo in una chat su{" "}
+          <a href="https://claude.ai" target="_blank" rel="noreferrer" className="underline">
+            claude.ai
+          </a>{" "}
+          (sul tuo abbonamento, nessun costo aggiuntivo), lascia che cerchi sul web e risponda, poi copia la sua
+          risposta e incollala nel campo <strong className="text-foreground">2. Incolla la risposta</strong> qui sotto e premi{" "}
+          <strong className="text-foreground">Valida e salva</strong>. Un blocco alla volta, quando vuoi — il progresso resta salvato.
+        </p>
+      </SectionCard>
+
       <p className="text-sm text-muted-foreground">
         {totaleFatti}/{giocatori.length} giocatori con dossier — {blocchi.length} blocchi da {blocchi[0]?.giocatori.length ?? 0}.
       </p>

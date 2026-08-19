@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { simulaRosa, type RisultatoSimulazione } from "@/lib/strategia/simula";
+import { RUOLO_CLASSI } from "@/lib/ruoli";
 import type { Player, SetupDoc, StrategyDoc } from "@/lib/blob/schemas";
 
 function stelle(valore: number): string {
@@ -23,29 +25,33 @@ export function SimulaRosaPanel({
   const [risultato, setRisultato] = useState<RisultatoSimulazione | null>(null);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => setRisultato(simulaRosa(setup, giocatori, strategy))}>
+        <Wand2 />
         Simula rosa
       </Button>
 
       {risultato && (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-4 text-sm">
-            <span>
-              Spesa totale: <span className="font-mono">{risultato.spesaTotale}</span> / {setup.creditiBase}
-            </span>
-            <Badge variant={risultato.entroBudget ? "secondary" : "outline"}>
-              {risultato.entroBudget ? "entro budget" : "sopra budget"}
-            </Badge>
-          </div>
-
-          <div className="flex flex-wrap gap-6 text-sm">
-            <span>
-              Copertura slot: <span className="font-mono">{stelle(risultato.rating.coperturaSlot)}</span>
-            </span>
-            <span>
-              Concentrazione spesa: <span className="font-mono">{stelle(risultato.rating.concentrazioneSpesa)}</span>
-            </span>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col gap-0.5 rounded-lg border border-border/60 p-2.5">
+              <span className="text-xs text-muted-foreground">Spesa totale</span>
+              <span className="font-mono text-lg font-semibold">
+                {risultato.spesaTotale}
+                <span className="text-sm font-normal text-muted-foreground"> / {setup.creditiBase}</span>
+              </span>
+              <Badge variant={risultato.entroBudget ? "secondary" : "outline"} className="w-fit">
+                {risultato.entroBudget ? "entro budget" : "sopra budget"}
+              </Badge>
+            </div>
+            <div className="flex flex-col gap-0.5 rounded-lg border border-border/60 p-2.5">
+              <span className="text-xs text-muted-foreground">Copertura slot</span>
+              <span className="text-lg text-amber-500">{stelle(risultato.rating.coperturaSlot)}</span>
+            </div>
+            <div className="flex flex-col gap-0.5 rounded-lg border border-border/60 p-2.5">
+              <span className="text-xs text-muted-foreground">Concentrazione spesa</span>
+              <span className="text-lg text-amber-500">{stelle(risultato.rating.concentrazioneSpesa)}</span>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
             Il fattore rischio (titolarità/infortuni) richiede i dati di scraping e non è ancora disponibile.
@@ -54,7 +60,7 @@ export function SimulaRosaPanel({
           <ul className="flex flex-col gap-1">
             {risultato.slot.map((s) => (
               <li key={`${s.ruolo}-${s.indiceSlot}`} className="flex items-center gap-2 text-sm">
-                <span className="w-6 shrink-0 font-mono text-xs text-muted-foreground">{s.ruolo}</span>
+                <span className={`size-2 shrink-0 rounded-full ${RUOLO_CLASSI[s.ruolo].dot}`} title={s.ruolo} />
                 {s.giocatore ? (
                   <>
                     <span className="flex-1">{s.giocatore.nome}</span>

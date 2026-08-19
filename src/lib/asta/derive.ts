@@ -147,13 +147,13 @@ export function derivaInflazione(
     return [{ prezzoPagato: a.price, quotazione: player.quotazioneAttuale, ts }];
   });
 
-  const osservata = inflazioneOsservata(acquisti);
+  const osservata = inflazioneOsservata(acquisti, setup.creditiBase);
 
   let teorica: number | null = null;
   if (setup.sforo.tipo === "nessuno") {
     const squadre = derivaSquadre(state, setup, giocatori);
     const creditiResiduiLega = squadre.reduce((tot, s) => tot + s.creditiResidui, 0);
-    teorica = inflazioneTeorica(creditiResiduiLega, giocatoriLiberi);
+    teorica = inflazioneTeorica(creditiResiduiLega, giocatoriLiberi, setup.creditiBase);
   }
 
   return { teorica, osservata, effettiva: teorica ?? osservata };

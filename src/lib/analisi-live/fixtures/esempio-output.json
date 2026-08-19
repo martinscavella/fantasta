@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "fase": "dopo-P",
+    "affidabilita": "alta",
+    "ricercaWebEseguita": true,
+    "degradato": false,
+    "noteDegrado": null,
+    "fonti": [
+      {
+        "titolo": "Griglia portieri Serie A 2026/27",
+        "url": "https://www.fantacalcio-online.com/it/consigli-fantacalcio/griglia-portieri-serie-a"
+      }
+    ]
+  },
+  "mercato": {
+    "moltiplicatoreMedio": 3.3,
+    "moltiplicatorePerFascia": [
+      { "fascia": "top", "quotMin": 25, "quotMax": null, "moltiplicatore": 0, "campione": 0 },
+      { "fascia": "semi-top", "quotMin": 15, "quotMax": 24, "moltiplicatore": 4.73, "campione": 6 },
+      { "fascia": "medi", "quotMin": 8, "quotMax": 14, "moltiplicatore": 1.68, "campione": 9 },
+      { "fascia": "low-cost", "quotMin": 0, "quotMax": 7, "moltiplicatore": 0, "campione": 0 }
+    ],
+    "creditiResiduiLega": 4890,
+    "slotResiduiLega": 110,
+    "prezzoMedioResiduo": 44.5,
+    "indicePressione": [
+      { "ruolo": "P", "creditiAttivi": 0, "slotResidui": 0, "creditiPerSlot": 0 },
+      { "ruolo": "D", "creditiAttivi": 4890, "slotResidui": 40, "creditiPerSlot": 122.3 },
+      { "ruolo": "C", "creditiAttivi": 4890, "slotResidui": 40, "creditiPerSlot": 122.3 },
+      { "ruolo": "A", "creditiAttivi": 4890, "slotResidui": 30, "creditiPerSlot": 163.0 }
+    ],
+    "scostamentoVsPiano": "I portieri semi-top sono andati a 4,73x la quotazione contro il 5,3x che il piano assumeva."
+  },
+  "avversari": [
+    {
+      "squadra": "Rossi FC",
+      "creditiResidui": 989,
+      "slotResidui": { "P": 0, "D": 8, "C": 8, "A": 6 },
+      "potereAcquistoMax": 968,
+      "creditiPerSlotResiduo": 45.0,
+      "profilo": "modificatore-difesa",
+      "descrizioneProfilo": "Ha pagato 88 Butez, il portiere del Como che ha subito meno gol in campionato.",
+      "livelloMinaccia": "critico",
+      "repartiChiusi": ["P"],
+      "blocchiClub": [],
+      "obiettiviProbabili": [
+        { "playerId": 5641, "probabilita": 0.7, "prezzoStimato": 42, "motivo": "Completamento del blocco Como" },
+        { "playerId": 6869, "probabilita": 0.6, "prezzoStimato": 36, "motivo": "Stesso ragionamento" },
+        { "playerId": 254, "probabilita": 0.35, "prezzoStimato": 125, "motivo": "Ha il potere d'acquisto per il top" }
+      ]
+    },
+    {
+      "squadra": "Bianchi Team",
+      "creditiResidui": 994,
+      "slotResidui": { "P": 0, "D": 8, "C": 8, "A": 6 },
+      "potereAcquistoMax": 973,
+      "creditiPerSlotResiduo": 45.2,
+      "profilo": "equilibrato",
+      "descrizioneProfilo": "79 per Josep Martinez e' il prezzo giusto, senza sovrapagare.",
+      "livelloMinaccia": "alto",
+      "repartiChiusi": ["P"],
+      "blocchiClub": [],
+      "obiettiviProbabili": [
+        { "playerId": 4159, "probabilita": 0.45, "prezzoStimato": 68, "motivo": "Coerente con Martinez" }
+      ]
+    },
+    {
+      "squadra": "Verdi United",
+      "creditiResidui": 992,
+      "slotResidui": { "P": 0, "D": 8, "C": 8, "A": 6 },
+      "potereAcquistoMax": 971,
+      "creditiPerSlotResiduo": 45.1,
+      "profilo": "indeterminato",
+      "descrizioneProfilo": "Ha preso Maignan a 71 e Meret a 25: due titolari, spesa contenuta.",
+      "livelloMinaccia": "medio",
+      "repartiChiusi": ["P"],
+      "blocchiClub": [],
+      "obiettiviProbabili": []
+    },
+    {
+      "squadra": "Neri Calcio",
+      "creditiResidui": 936,
+      "slotResidui": { "P": 0, "D": 8, "C": 8, "A": 6 },
+      "potereAcquistoMax": 915,
+      "creditiPerSlotResiduo": 42.5,
+      "profilo": "indeterminato",
+      "descrizioneProfilo": "164 crediti spesi in portieri, il doppio di chiunque altro.",
+      "livelloMinaccia": "basso",
+      "repartiChiusi": ["P"],
+      "blocchiClub": [],
+      "obiettiviProbabili": []
+    }
+  ],
+  "minaccePerSlot": [
+    {
+      "ruolo": "D",
+      "indiceSlot": 0,
+      "playerId": 7181,
+      "disponibile": true,
+      "nRivaliAttivi": 4,
+      "rivaliPrincipali": ["Rossi FC", "Bianchi Team"],
+      "prezzoStimatoMercato": 78,
+      "mioTettoAggiornato": 84,
+      "verdetto": "rilancia-deciso",
+      "note": "Il mercato dei portieri e' stato piu' freddo del previsto."
+    },
+    {
+      "ruolo": "D",
+      "indiceSlot": 1,
+      "playerId": 4159,
+      "disponibile": true,
+      "nRivaliAttivi": 4,
+      "rivaliPrincipali": ["Bianchi Team"],
+      "prezzoStimatoMercato": 66,
+      "mioTettoAggiornato": 62,
+      "verdetto": "rilancia-con-cautela",
+      "note": "Bianchi Team ha Josep Martinez e i crediti per costruirci intorno il blocco Inter."
+    }
+  ],
+  "pianoAggiornato": {
+    "creditiResiduiMiei": 979,
+    "budgetResiduoReparto": { "P": 0, "D": 334, "C": 384, "A": 261 },
+    "slotResidui": { "P": 0, "D": 8, "C": 8, "A": 6 },
+    "riservaMinima": 22,
+    "prezziMassimiAggiornati": [
+      { "playerId": 7181, "valore": 84, "valorePrecedente": 80, "delta": 4, "motivo": "Risparmio sul reparto portieri" },
+      { "playerId": 254, "valore": 110, "valorePrecedente": 110, "delta": 0, "motivo": "Invariato" },
+      { "playerId": 4159, "valore": 62, "valorePrecedente": 62, "delta": 0, "motivo": "Invariato" }
+    ],
+    "slotObiettiviAggiornati": [
+      { "ruolo": "D", "indiceSlot": 0, "obiettivoPrincipale": 7181, "alternative": [4998, 254, 4159] }
+    ]
+  },
+  "consigliChiamata": [
+    { "playerId": 254, "tipo": "brucia-crediti", "prezzoAtteso": 125, "motivo": "Rossi FC ha il potere d'acquisto per prenderlo." },
+    { "playerId": 5641, "tipo": "aspetta-fine", "prezzoAtteso": 42, "motivo": "Quotato 9, lo vogliono in pochi." },
+    { "playerId": 4312, "tipo": "non-chiamare", "prezzoAtteso": 0, "motivo": "Già acquistato da Verdi United, ed è comunque nei tuoi esclusi." }
+  ],
+  "alert": [
+    { "gravita": "info", "messaggio": "Reparto portieri chiuso: 121 crediti spesi sui 120 preventivati.", "azione": "Nessuna correzione necessaria." },
+    { "gravita": "attenzione", "messaggio": "Rossi FC ha lo stesso piano difensivo tuo e 989 crediti residui.", "azione": "Anticipa i tuoi target Como." }
+  ],
+  "sintesi": "Il reparto portieri e' andato come previsto: Svilar a 102 contro un tetto di 95."
+}

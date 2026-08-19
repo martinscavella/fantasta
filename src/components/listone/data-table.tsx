@@ -13,6 +13,7 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
+import { Columns3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -191,6 +192,7 @@ export function ListoneDataTable({
               onClick={(e) => e.stopPropagation()}
               onChange={() => onToggleSeleziona(id)}
               title="Aggiungi al confronto"
+              className="size-4 rounded border-input accent-primary"
             />
           );
         },
@@ -284,6 +286,7 @@ export function ListoneDataTable({
               type="checkbox"
               checked={nascondiAssegnati}
               onChange={(e) => setNascondiAssegnati(e.target.checked)}
+              className="size-4 rounded border-input accent-primary"
             />
             Nascondi assegnati
           </label>
@@ -291,13 +294,22 @@ export function ListoneDataTable({
         <span className="text-sm text-muted-foreground">{data.length} giocatori</span>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
+        Clicca una riga per aprire la scheda giocatore · spunta la casella a sinistra per aggiungerlo al confronto (fino a {MAX_CONFRONTO}).
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+        <span className="flex items-center gap-1.5 font-medium text-foreground">
+          <Columns3 className="size-3.5" />
+          Colonne
+        </span>
         {colonneVisibili.map((column) => (
           <label key={column.id} className="flex items-center gap-1.5">
             <input
               type="checkbox"
               checked={column.getIsVisible()}
               onChange={column.getToggleVisibilityHandler()}
+              className="size-4 rounded border-input accent-primary"
             />
             {String(column.columnDef.header)}
           </label>

@@ -1,5 +1,10 @@
-import { getAliases, getListone, getListoneIndex, getStats, getStatsIndex } from "@/lib/blob/repository";
+import Link from "next/link";
+import { ListChecks, Terminal } from "lucide-react";
+import { getAliases, getAsteIndex, getListone, getListoneIndex, getStats, getStatsIndex } from "@/lib/blob/repository";
 import { CodaRevisione, type RigaDaRivedere } from "@/components/statistiche/coda-revisione";
+import { PageHeader } from "@/components/shared/page-header";
+import { SectionCard } from "@/components/shared/section-card";
+import { StagioneList } from "@/components/shared/stagione-list";
 
 function formattaData(ts: number | null): string {
   if (ts === null) return "mai";
@@ -11,24 +16,15 @@ export default async function StatistichePage({ searchParams }: PageProps<"/impo
   const stagione = Array.isArray(stagioneParam) ? stagioneParam[0] : stagioneParam;
 
   if (!stagione) {
+    const asteIndex = await getAsteIndex();
+    const stagioni = [...new Set((asteIndex?.data.aste ?? []).map((a) => a.stagione))];
     return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-4 text-xl font-semibold">Statistiche</h1>
-        <form className="flex flex-col gap-3">
-          <label className="text-sm text-muted-foreground" htmlFor="stagione">
-            Stagione
-          </label>
-          <input
-            id="stagione"
-            name="stagione"
-            placeholder="es. 2026-27"
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
-          />
-          <button type="submit" className="h-8 rounded-lg bg-primary text-sm text-primary-foreground">
-            Apri
-          </button>
-        </form>
-      </div>
+      <StagioneList
+        stagioni={stagioni}
+        hrefPrefix="/impostazioni/statistiche"
+        title="Statistiche"
+        description="Stato dell'ultimo scraping (media voto, fantamedia, presenze…) e coda di revisione per i nomi che non hanno trovato un match automatico nel listone."
+      />
     );
   }
 
@@ -64,33 +60,49 @@ export default async function StatistichePage({ searchParams }: PageProps<"/impo
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
-      <h1 className="text-xl font-semibold">Statistiche — {stagione}</h1>
+      <PageHeader
+        title={`Statistiche — ${stagione}`}
+        description="Le statistiche non si importano da qui: questa pagina mostra solo lo stato dell'ultimo scraping (eseguito da CLI o dal cron) e la coda di nomi da abbinare a mano."
+      />
 
-      <div className="flex flex-col gap-1 rounded-xl border border-border p-4 text-sm">
-        <span>
-          Ultimo tentativo: <span className="text-muted-foreground">{formattaData(lastAttempt)}</span>
-        </span>
-        <span>
-          Ultimo aggiornamento riuscito: <span className="text-muted-foreground">{formattaData(lastSuccess)}</span>
-        </span>
-        {statsIndex?.data.current ? (
+      <SectionCard title="Stato scraping" icon={Terminal}>
+        <div className="flex flex-col gap-1 text-sm">
           <span>
-            {totaleRighe} righe importate, {righeDaRivedere.length} da rivedere
+            Ultimo tentativo: <span className="text-muted-foreground">{formattaData(lastAttempt)}</span>
           </span>
-        ) : (
-          <span className="text-muted-foreground">
-            Nessuna statistica ancora importata per questa stagione — esegui{" "}
-            <code className="rounded bg-muted px-1">npm run scrape -- {stagione}</code>.
+          <span>
+            Ultimo aggiornamento riuscito: <span className="text-muted-foreground">{formattaData(lastSuccess)}</span>
           </span>
-        )}
-      </div>
+          {statsIndex?.data.current ? (
+            <span>
+              {totaleRighe} righe importate, {righeDaRivedere.length} da rivedere
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              Nessuna statistica ancora importata per questa stagione. Da terminale, nella cartella del progetto:{" "}
+              <code className="rounded bg-muted px-1">npm run scrape -- {stagione}</code>
+            </span>
+          )}
+        </div>
+      </SectionCard>
 
       {statsIndex?.data.current && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-muted-foreground">Coda di revisione</h2>
+        <SectionCard
+          title="Coda di revisione"
+          icon={ListChecks}
+          description="Nomi trovati dallo scraping che non hanno trovato un match automatico nel listone: assegnali a un giocatore o scarta la riga. Le decisioni si salvano come alias e valgono per i prossimi import."
+        >
           <CodaRevisione righe={righeDaRivedere} giocatori={giocatori} />
-        </section>
+        </SectionCard>
       )}
+
+      <p className="text-sm text-muted-foreground">
+        Statistiche a posto? Il passo successivo è{" "}
+        <Link href={`/impostazioni/dossier?stagione=${stagione}`} className="underline">
+          generare i dossier giocatori
+        </Link>
+        .
+      </p>
     </div>
   );
 }

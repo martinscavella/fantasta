@@ -1,9 +1,13 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { getBoard, getListone, getSetup, getStats, getStatsIndex } from "@/lib/blob/repository";
 import { reduceBoard } from "@/lib/asta/reducer";
 import { costruisciRose } from "@/lib/asta/derive";
 import { fasciaStandard } from "@/lib/pricing";
 import { AstaSubNav } from "@/components/asta/asta-sub-nav";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/page-header";
 import { ListoneClient } from "@/components/listone/listone-client";
 import type { RigaListone } from "@/components/listone/data-table";
 import type { Ruolo } from "@/lib/blob/schemas";
@@ -39,7 +43,7 @@ export default async function AstaListonePage({ params }: PageProps<"/asta/[id]/
 
   const righe: RigaListone[] = giocatori.map((g) => ({
     ...g,
-    fascia: fasciaStandard(g.quotazioneAttuale),
+    fascia: fasciaStandard(g.quotazioneAttuale, setup.data.creditiBase),
     stats: statsPerPlayerId.get(g.id) ?? null,
     assegnazione: assegnazionePerId.get(g.id) ?? null,
   }));
@@ -47,7 +51,16 @@ export default async function AstaListonePage({ params }: PageProps<"/asta/[id]/
   return (
     <div className="flex flex-col gap-5 p-6 md:p-8">
       <AstaSubNav astaId={setup.data.id} nome={setup.data.nome} />
-      <h1 className="text-2xl font-bold tracking-tight">Listone</h1>
+      <PageHeader
+        title="Listone"
+        description="I giocatori già assegnati in questa asta restano in elenco, sbarrati, con squadra e prezzo — così sai sempre chi è ancora libero."
+        actions={
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/asta/${setup.data.id}/analisi-live`} />}>
+            <Sparkles />
+            Analisi live
+          </Button>
+        }
+      />
       <ListoneClient giocatori={righe} />
     </div>
   );

@@ -1,31 +1,23 @@
 import Link from "next/link";
-import { getListone, getListoneIndex, getStats, getStatsIndex } from "@/lib/blob/repository";
+import { getAsteIndex, getListone, getListoneIndex, getStats, getStatsIndex } from "@/lib/blob/repository";
 import { fasciaStandard } from "@/lib/pricing";
 import { ListoneClient } from "@/components/listone/listone-client";
+import { PageHeader } from "@/components/shared/page-header";
+import { StagioneGate } from "@/components/shared/stagione-gate";
 import type { RigaListone } from "@/components/listone/data-table";
 
 export default async function ListonePage({ searchParams }: PageProps<"/listone">) {
   const { stagione } = await searchParams;
 
   if (!stagione) {
+    const asteIndex = await getAsteIndex();
+    const stagioni = [...new Set((asteIndex?.data.aste ?? []).map((a) => a.stagione))];
     return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="mb-4 text-xl font-semibold">Listone</h1>
-        <form className="flex flex-col gap-3">
-          <label className="text-sm text-muted-foreground" htmlFor="stagione">
-            Stagione
-          </label>
-          <input
-            id="stagione"
-            name="stagione"
-            placeholder="es. 2026-27"
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
-          />
-          <button type="submit" className="h-8 rounded-lg bg-primary text-sm text-primary-foreground">
-            Apri
-          </button>
-        </form>
-      </div>
+      <StagioneGate
+        stagioni={stagioni}
+        title="Listone"
+        description="Anagrafica, quotazioni e statistiche dei giocatori per stagione, fuori dal contesto di una singola asta."
+      />
     );
   }
 
@@ -37,7 +29,7 @@ export default async function ListonePage({ searchParams }: PageProps<"/listone"
       <div className="mx-auto max-w-md p-8">
         <p className="text-sm text-muted-foreground">
           Nessun listone importato per la stagione &quot;{stagioneValue}&quot;.{" "}
-          <Link href="/impostazioni/listone" className="underline">
+          <Link href={`/impostazioni/listone?stagione=${stagioneValue}`} className="underline">
             Importane uno
           </Link>
           .
@@ -65,7 +57,7 @@ export default async function ListonePage({ searchParams }: PageProps<"/listone"
 
   return (
     <div className="flex flex-col gap-5 p-6 md:p-8">
-      <h1 className="text-2xl font-bold tracking-tight">Listone {stagioneValue}</h1>
+      <PageHeader title={`Listone ${stagioneValue}`} description="Tutti i giocatori della stagione, filtrabili e ordinabili — non legato a una singola asta." />
       <ListoneClient giocatori={giocatori} />
     </div>
   );

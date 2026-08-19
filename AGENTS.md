@@ -14,3 +14,7 @@ Il piano completo (contesto, decisioni, architettura dati su Vercel Blob,
 fasi di lavoro, gotcha noti) è in [`PLAN.md`](./PLAN.md), importato anche da
 `CLAUDE.md`. Leggerlo prima di riprendere il lavoro — indica a che fase siamo
 e cosa manca per chiuderla.
+
+Le convenzioni UI condivise (componenti di layout, tipografia, colore
+semantico) sono in [`DESIGN-SYSTEM.md`](./DESIGN-SYSTEM.md) — usarle prima di
+scrivere una nuova pagina o sezione da zero.

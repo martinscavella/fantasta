@@ -2,8 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { getListoneIndex, putSetup, updateAsteIndex } from "@/lib/blob/repository";
-import { SetupDocSchema } from "@/lib/blob/schemas";
+import { getListoneIndex, putSetup, updateAsteIndex, updateSetup } from "@/lib/blob/repository";
+import { SetupDocSchema, type Squadra } from "@/lib/blob/schemas";
 
 export type CreaAstaState = { error?: string } | undefined;
 
@@ -63,4 +63,25 @@ export async function creaAsta(_prevState: CreaAstaState, formData: FormData): P
   }));
 
   redirect(`/asta/${setup.id}`);
+}
+
+export type AggiornaSquadreResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Aggiorna solo i campi di personalizzazione delle squadre (allenatore,
+ * squadra del cuore, note — § Impostazioni asta nel piano), mai id/nome: la
+ * pagina impostazioni non permette di rinominare/aggiungere/rimuovere
+ * squadre, solo di arricchirle. `modifiche` è indicizzato per id squadra,
+ * niente merge speciale — ultima scrittura vince, come per la Strategia.
+ */
+export async function aggiornaSquadre(
+  astaId: string,
+  modifiche: Record<string, Pick<Squadra, "allenatore" | "squadraDelCuore" | "note">>,
+): Promise<AggiornaSquadreResult> {
+  const risultato = await updateSetup(astaId, (current) => ({
+    ...current,
+    squadre: current.squadre.map((s) => (modifiche[s.id] ? { ...s, ...modifiche[s.id] } : s)),
+  }));
+  if (!risultato) return { ok: false, error: "Asta non trovata." };
+  return { ok: true };
 }

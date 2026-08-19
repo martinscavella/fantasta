@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,36 @@ type PreviewResponse = {
 };
 
 type CommitResponse = { versionId: string; numeroGiocatori: number; righeSaltate: number; diff: ListoneDiff | null };
+
+const PASSI = ["Carica file", "Mappa colonne", "Conferma"] as const;
+
+// Stepper minimale: la pagina è un wizard lineare di 3 passi ma prima si
+// leggeva come un unico form indistinto — qui basta lo stato già presente
+// (anteprima/esito) per capire in che passo si è, senza altro stato dedicato.
+function Stepper({ passoAttivo }: { passoAttivo: 0 | 1 | 2 }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      {PASSI.map((label, i) => (
+        <div key={label} className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "flex size-5 shrink-0 items-center justify-center rounded-full font-semibold",
+                i < passoAttivo && "bg-primary/15 text-primary",
+                i === passoAttivo && "bg-primary text-primary-foreground",
+                i > passoAttivo && "bg-muted text-muted-foreground",
+              )}
+            >
+              {i + 1}
+            </span>
+            <span className={cn(i === passoAttivo ? "font-medium text-foreground" : "text-muted-foreground")}>{label}</span>
+          </div>
+          {i < PASSI.length - 1 && <span className="h-px w-6 bg-border" />}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function ImportListoneClient({ stagione }: { stagione: string }) {
   const router = useRouter();
@@ -117,8 +148,12 @@ export function ImportListoneClient({ stagione }: { stagione: string }) {
     }
   }
 
+  const passoAttivo = esito ? 2 : anteprima ? 1 : 0;
+
   return (
     <div className="flex flex-col gap-4">
+      <Stepper passoAttivo={passoAttivo} />
+
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="fonte">Fonte</Label>

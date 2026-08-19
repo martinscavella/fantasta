@@ -1,3 +1,4 @@
+import { prezzoMassimoDefault } from "@/lib/pricing";
 import type { Player, Ruolo, SetupDoc, StrategyDoc } from "@/lib/blob/schemas";
 
 const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
@@ -56,7 +57,7 @@ export function simulaRosa(setup: SetupDoc, giocatori: Player[], strategy: Strat
         ruolo: obiettivo.ruolo,
         indiceSlot: obiettivo.indiceSlot,
         giocatore,
-        prezzo: prezzoPerId.get(scelto) ?? giocatore.quotazioneAttuale,
+        prezzo: prezzoPerId.get(scelto) ?? prezzoMassimoDefault(giocatore.quotazioneAttuale, setup.creditiBase),
         fonteScelta: scelto === obiettivo.obiettivoPrincipale ? "obiettivo" : "alternativa",
       };
     });

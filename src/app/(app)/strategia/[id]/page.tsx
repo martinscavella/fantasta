@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getListone, getSetup, getStrategy } from "@/lib/blob/repository";
-import { FASCE_STANDARD } from "@/lib/pricing";
+import { fasceStandard } from "@/lib/pricing";
 import { applicaTemplate } from "@/lib/strategia/template";
 import { StrategiaClient } from "@/components/strategia/strategia-client";
 import type { StrategyDoc } from "@/lib/blob/schemas";
@@ -18,7 +18,7 @@ export default async function StrategiaPage({ params }: PageProps<"/strategia/[i
   const strategyIniziale: StrategyDoc =
     strategyDoc?.data ?? {
       astaId: id,
-      fasce: FASCE_STANDARD,
+      fasce: fasceStandard(setup.data.creditiBase),
       budgetReparto: applicaTemplate("budget-diffuso", setup.data.creditiBase),
       slotObiettivi: [],
       prezziMassimi: [],

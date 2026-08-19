@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AnalisiAstaLiveSchema, FaseAstaSchema } from "@/lib/analisi-live/schemas";
 
 // Solo Classic: P/D/C/A. Niente ruoli Mantra.
 export const RuoloSchema = z.enum(["P", "D", "C", "A"]);
@@ -179,9 +180,17 @@ export type AsteIndex = z.infer<typeof AsteIndexSchema>;
 
 // --- aste/{astaId}/setup.json — mutabile ------------------------------------
 
+// Note personali sull'avversario, compilate dopo la creazione dell'asta (man
+// mano che si conoscono i rivali) — non servono per il tracker in sé, ma
+// aiutano a leggere le sue mosse. `squadraDelCuore` in particolare è un
+// segnale usato dall'Analisi live (§ Analisi decisione live nel piano): un
+// tifoso della squadra X tende a sovrapagare i suoi giocatori.
 export const SquadraSchema = z.object({
   id: z.string().min(1),
   nome: z.string().min(1),
+  allenatore: z.string().optional(),
+  squadraDelCuore: z.string().optional(),
+  note: z.string().optional(),
 });
 export type Squadra = z.infer<typeof SquadraSchema>;
 
@@ -319,3 +328,16 @@ export const DebriefDocSchema = z.object({
   updatedAt: z.number().int().nonnegative(),
 });
 export type DebriefDoc = z.infer<typeof DebriefDocSchema>;
+
+// --- aste/{astaId}/analisi-live.json — mutabile ------------------------------
+// L'ultima analisi validata via Ponte IA manuale (src/lib/actions/analisi-live.ts):
+// un solo editor, ultima scrittura vince, come DebriefDoc — nessun merge da fare,
+// riapre l'ultimo risultato senza dover reincollare la risposta.
+
+export const AnalisiLiveDocSchema = z.object({
+  astaId: z.string().min(1),
+  fase: FaseAstaSchema,
+  analisi: AnalisiAstaLiveSchema,
+  updatedAt: z.number().int().nonnegative(),
+});
+export type AnalisiLiveDoc = z.infer<typeof AnalisiLiveDocSchema>;
