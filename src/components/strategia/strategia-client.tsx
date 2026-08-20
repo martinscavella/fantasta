@@ -74,8 +74,17 @@ export function StrategiaClient({
 
       {strategy.sintesiIA && <AiCallout label="Sintesi della strategia generata dall'IA" testo={strategy.sintesiIA} />}
 
-      <SectionCard title="Fasce" description="Soglie di prezzo che classificano i giocatori del listone." icon={Layers}>
-        <FasceEditor fasce={strategy.fasce} onChange={(fasce) => aggiorna({ fasce })} />
+      <SectionCard
+        title="Fasce"
+        description="Soglie di prezzo che classificano i giocatori del listone. Sposta il pavimento di una fascia: il tetto della successiva si adatta da solo, e la barra mostra quanti giocatori ci finiscono."
+        icon={Layers}
+      >
+        <FasceEditor
+          fasce={strategy.fasce}
+          giocatori={giocatori}
+          creditiBase={setup.creditiBase}
+          onChange={(fasce) => aggiorna({ fasce })}
+        />
       </SectionCard>
 
       <SectionCard
@@ -93,11 +102,18 @@ export function StrategiaClient({
         />
       </SectionCard>
 
-      <SectionCard title="Slot: obiettivi e alternative" description="Chi punti a prendere per ogni slot della rosa, in ordine di preferenza." icon={Target}>
+      <SectionCard
+        title="Slot: obiettivi e alternative"
+        description="Chi punti a prendere per ogni slot, in ordine di preferenza. Un reparto alla volta, col costo degli obiettivi confrontato col budget che gli hai assegnato."
+        icon={Target}
+      >
         <SlotObiettiviEditor
           slot={setup.slot}
           giocatori={giocatori}
           slotObiettivi={strategy.slotObiettivi}
+          prezziMassimi={strategy.prezziMassimi}
+          budgetReparto={strategy.budgetReparto}
+          creditiBase={setup.creditiBase}
           onChange={(slotObiettivi) => aggiorna({ slotObiettivi })}
         />
       </SectionCard>
