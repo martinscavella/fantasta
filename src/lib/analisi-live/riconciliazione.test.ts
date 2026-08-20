@@ -171,3 +171,51 @@ describe("riconcilia — [D] §7", () => {
     expect(risultato.alert.some((a) => a.messaggio.includes("risultati di ricerca"))).toBe(false);
   });
 });
+
+// Il filtro sui giocatori già venduti guardava SOLO le rose avversarie: un
+// giocatore che avevo comprato IO restava un bersaglio valido, e tornava nei
+// consigli di chiamata e nei prezzi massimi come se fosse ancora all'asta.
+describe("riconcilia — giocatori già assegnati", () => {
+  function outputConGiocatoreMio(): AnalisiAstaLive {
+    const base = outputConErrori();
+    return {
+      ...base,
+      pianoAggiornato: {
+        ...base.pianoAggiornato,
+        // playerId 1 è già nella MIA rosa (comprato a 50).
+        prezziMassimiAggiornati: [
+          { playerId: 1, valore: 60, valorePrecedente: 50, delta: 10, motivo: "il prezzo è salito" },
+        ],
+        slotObiettiviAggiornati: [{ ruolo: "P", indiceSlot: 0, obiettivoPrincipale: 1, alternative: [] }],
+      },
+      consigliChiamata: [
+        { playerId: 1, tipo: "chiama-ora", prezzoAtteso: 60, motivo: "è già mio, non ha senso chiamarlo" },
+      ],
+    };
+  }
+
+  it("non propone un prezzo massimo per un giocatore già nella mia rosa", () => {
+    const risultato = riconcilia(outputConGiocatoreMio(), stato, metriche, registro, null);
+
+    expect(risultato.pianoAggiornato.prezziMassimiAggiornati.find((p) => p.playerId === 1)).toBeUndefined();
+  });
+
+  it("non consiglia di chiamare un giocatore già nella mia rosa", () => {
+    const risultato = riconcilia(outputConGiocatoreMio(), stato, metriche, registro, null);
+
+    expect(risultato.consigliChiamata.find((c) => c.playerId === 1)).toBeUndefined();
+  });
+
+  it("segnala lo scarto distinguendo la rosa mia da quella di un rivale", () => {
+    const risultato = riconcilia(outputConGiocatoreMio(), stato, metriche, registro, null);
+
+    expect(risultato.alert.some((a) => a.messaggio.includes("già nella tua rosa"))).toBe(true);
+  });
+
+  it("continua a scartare i giocatori già presi da un avversario", () => {
+    const risultato = riconcilia(outputConErrori(), stato, metriche, registro, null);
+
+    expect(risultato.pianoAggiornato.prezziMassimiAggiornati.find((p) => p.playerId === 2)).toBeUndefined();
+    expect(risultato.pianoAggiornato.slotObiettiviAggiornati[0].alternative).not.toContain(2);
+  });
+});

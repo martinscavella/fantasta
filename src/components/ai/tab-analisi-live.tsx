@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Check, RotateCcw } from "lucide-react";
 import { PonteIATesto, type EsitoApplicazione } from "@/components/ai/ponte-ia";
 import { RisultatoAnalisi } from "@/components/ai/risultato-analisi";
 import { Button } from "@/components/ui/button";
@@ -44,8 +46,10 @@ export function TabAnalisiLive({
     analisiIniziale ? { analisi: analisiIniziale, nomiPerId: nomiPerIdIniziale } : null,
   );
   const [applicando, setApplicando] = useState(false);
-  const [pianoApplicato, setPianoApplicato] = useState(false);
   const [errorePiano, setErrorePiano] = useState<string | null>(null);
+  // Cosa e finito nella Strategia con l ultima validazione: null finche non
+  // se ne valida una in questa sessione (es. analisi ripescata da Blob).
+  const [applicato, setApplicato] = useState<{ prezzi: number; slot: number } | null>(null);
 
   function svolgimento(): SvolgimentoAsta {
     return svolgimentoTipo === "ordine" ? { tipo: "ordine", letteraIniziale } : { tipo: "chiamata" };
@@ -57,25 +61,31 @@ export function TabAnalisiLive({
     setApplicando(true);
     const esito = await applicaPianoAllaStrategia(astaId, analisi.analisi);
     setApplicando(false);
-    if (esito.ok) setPianoApplicato(true);
-    else setErrorePiano(esito.error);
+    if (esito.ok) {
+      setApplicato({
+        prezzi: analisi.analisi.pianoAggiornato.prezziMassimiAggiornati.length,
+        slot: analisi.analisi.pianoAggiornato.slotObiettiviAggiornati.length,
+      });
+    } else setErrorePiano(esito.error);
   }
 
   return (
     <PonteIATesto
       generaPrompt={() => generaPromptAnalisiLive(astaId, fase, svolgimento())}
       onApplica={async (testo): Promise<EsitoApplicazione> => {
-        setPianoApplicato(false);
+        setErrorePiano(null);
         const esito = await applicaAnalisiLive(astaId, fase, testo, svolgimento());
         if (!esito.ok) {
           setAnalisi(null);
+          setApplicato(null);
           return { ok: false, error: esito.error };
         }
         setAnalisi({ analisi: esito.analisi, nomiPerId: esito.nomiPerId });
+        setApplicato(esito.applicato);
         return { ok: true };
       }}
-      etichettaApplica="Valida e mostra analisi"
-      messaggioSuccesso="Analisi validata: i numeri sono stati ricalcolati."
+      etichettaApplica="Valida e applica"
+      messaggioSuccesso="Analisi validata, numeri ricalcolati e piano scritto nella Strategia."
       parametri={
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1.5">
@@ -144,14 +154,36 @@ export function TabAnalisiLive({
     >
       {analisi && (
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 p-3">
-            <span className="text-sm text-muted-foreground">
-              Aggiorna prezzi massimi e obiettivi di slot nella Strategia con quanto ricalcolato qui sotto.
-            </span>
-            <Button type="button" size="sm" variant="outline" onClick={() => void applicaAlPiano()} disabled={applicando}>
-              {applicando ? "Applico…" : pianoApplicato ? "Applicato" : "Applica al piano"}
-            </Button>
-          </div>
+          {applicato ? (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-300">
+              <Check className="size-4 shrink-0" />
+              <span>
+                Scritti nella Strategia <span className="font-mono font-semibold">{applicato.prezzi}</span> prezzi
+                massimi e <span className="font-mono font-semibold">{applicato.slot}</span> obiettivi di slot. Il
+                Tracker li usa già per il prezzo consigliato.
+              </span>
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                nativeButton={false}
+                render={<Link href={`/asta/${astaId}/strategia`} />}
+              >
+                Vedi la Strategia
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 p-3">
+              <span className="text-sm text-muted-foreground">
+                Questa analisi arriva da un salvataggio precedente: riscrivila nella Strategia se vuoi che il Tracker
+                usi questi tetti.
+              </span>
+              <Button type="button" size="sm" variant="outline" onClick={() => void applicaAlPiano()} disabled={applicando}>
+                <RotateCcw />
+                {applicando ? "Applico…" : "Riapplica al piano"}
+              </Button>
+            </div>
+          )}
           {errorePiano && <p className="text-sm text-destructive">{errorePiano}</p>}
           <RisultatoAnalisi analisi={analisi.analisi} nomiPerId={analisi.nomiPerId} />
         </div>

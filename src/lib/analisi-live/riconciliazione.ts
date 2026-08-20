@@ -11,6 +11,27 @@ function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
 
+/**
+ * Chi è già stato aggiudicato, a chiunque: le rose avversarie E la mia. Il
+ * filtro guardava solo gli avversari, quindi un giocatore che avevo già
+ * comprato io restava un bersaglio valido e tornava nei consigli di chiamata
+ * e nei prezzi massimi come se fosse ancora all'asta.
+ */
+function giocatoriAssegnati(stato: StatoAsta): Map<number, "mia" | "avversario"> {
+  const assegnati = new Map<number, "mia" | "avversario">();
+  for (const s of stato.avversari) {
+    for (const r of s.rosa) assegnati.set(r.playerId, "avversario");
+  }
+  // La mia rosa per ultima: se un id comparisse in entrambe (input incoerente)
+  // vince "mia", che è il messaggio più utile da leggere.
+  for (const r of stato.miaSquadra.rosa) assegnati.set(r.playerId, "mia");
+  return assegnati;
+}
+
+function motivoAssegnato(dove: "mia" | "avversario"): string {
+  return dove === "mia" ? "già nella tua rosa" : "già acquistato da un avversario";
+}
+
 function scartatoAlert(playerId: number, motivo: string): Alert {
   return {
     gravita: "attenzione",
@@ -90,7 +111,7 @@ function filtraObiettivo(
   id: number | null,
   registro: RegistroGiocatori,
   esclusi: Set<number>,
-  possedutiDaAltri: Set<number>,
+  assegnati: Map<number, "mia" | "avversario">,
   alert: Alert[],
 ): number | null {
   if (id === null) return null;
@@ -102,8 +123,9 @@ function filtraObiettivo(
     alert.push(scartatoAlert(id, "nei tuoi esclusi (vincoli.esclusi)"));
     return null;
   }
-  if (possedutiDaAltri.has(id)) {
-    alert.push(scartatoAlert(id, "già acquistato da un avversario"));
+  const dove = assegnati.get(id);
+  if (dove) {
+    alert.push(scartatoAlert(id, motivoAssegnato(dove)));
     return null;
   }
   return id;
@@ -123,10 +145,10 @@ function riconciliaPiano(
   const tettoMassimo = Math.max(0, creditiResiduiMiei - riservaMinima + 1);
 
   const esclusi = new Set(stato.vincoli?.esclusi ?? []);
-  const possedutiDaAltri = new Set(stato.avversari.flatMap((s) => s.rosa.map((r) => r.playerId)));
+  const assegnati = giocatoriAssegnati(stato);
 
   const prezziMassimiAggiornati = piano.prezziMassimiAggiornati
-    .filter((p) => filtraObiettivo(p.playerId, registro, esclusi, possedutiDaAltri, alert) !== null)
+    .filter((p) => filtraObiettivo(p.playerId, registro, esclusi, assegnati, alert) !== null)
     .map((p) => {
       const valore = clamp(p.valore, 0, tettoMassimo);
       return { ...p, valore, delta: valore - (p.valorePrecedente ?? 0) };
@@ -134,8 +156,8 @@ function riconciliaPiano(
 
   const slotObiettiviAggiornati = piano.slotObiettiviAggiornati.map((so) => ({
     ...so,
-    obiettivoPrincipale: filtraObiettivo(so.obiettivoPrincipale, registro, esclusi, possedutiDaAltri, alert),
-    alternative: so.alternative.filter((id) => registro.has(id) && !esclusi.has(id) && !possedutiDaAltri.has(id)),
+    obiettivoPrincipale: filtraObiettivo(so.obiettivoPrincipale, registro, esclusi, assegnati, alert),
+    alternative: so.alternative.filter((id) => registro.has(id) && !esclusi.has(id) && !assegnati.has(id)),
   }));
 
   return { creditiResiduiMiei, budgetResiduoReparto, slotResidui, riservaMinima, prezziMassimiAggiornati, slotObiettiviAggiornati };
@@ -196,7 +218,7 @@ function filtraConsigli(
   alert: Alert[],
 ): AnalisiAstaLive["consigliChiamata"] {
   const esclusi = new Set(stato.vincoli?.esclusi ?? []);
-  const possedutiDaAltri = new Set(stato.avversari.flatMap((s) => s.rosa.map((r) => r.playerId)));
+  const assegnati = giocatoriAssegnati(stato);
 
   return consigli.filter((c) => {
     if (!registro.has(c.playerId)) {
@@ -213,8 +235,9 @@ function filtraConsigli(
       alert.push(scartatoAlert(c.playerId, "nei tuoi esclusi (vincoli.esclusi)"));
       return false;
     }
-    if (possedutiDaAltri.has(c.playerId)) {
-      alert.push(scartatoAlert(c.playerId, "già acquistato da un avversario"));
+    const dove = assegnati.get(c.playerId);
+    if (dove) {
+      alert.push(scartatoAlert(c.playerId, motivoAssegnato(dove)));
       return false;
     }
     return true;

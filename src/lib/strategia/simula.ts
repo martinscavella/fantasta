@@ -1,5 +1,5 @@
 import { prezzoMassimoDefault } from "@/lib/pricing";
-import type { Player, Ruolo, SetupDoc, StrategyDoc } from "@/lib/blob/schemas";
+import type { BudgetPerRuolo, Player, Ruolo, SetupDoc, StrategyDoc } from "@/lib/blob/schemas";
 
 const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
 
@@ -15,6 +15,16 @@ export type RisultatoSimulazione = {
   slot: SlotSimulato[];
   spesaTotale: number;
   entroBudget: boolean;
+  // Spesa simulata per reparto, da confrontare con strategy.budgetReparto: la
+  // UI la ricavava a mano dallo slot, ed e la meta della domanda "il piano sta
+  // in piedi?" — l altra meta e il totale.
+  spesaPerRuolo: BudgetPerRuolo;
+  slotCoperti: number;
+  slotTotali: number;
+  // Quota del giocatore piu caro sulla spesa totale: e il numero da cui esce
+  // il rating di concentrazione, esposto perche la UI possa spiegare il voto
+  // invece di mostrare cinque stelle senza motivo.
+  quotaMassima: number;
   rating: {
     // 0 = nessuno slot ancora impostato. 1-5 altrimenti.
     coperturaSlot: number;
@@ -85,10 +95,17 @@ export function simulaRosa(setup: SetupDoc, giocatori: Player[], strategy: Strat
               ? 4
               : 5;
 
+  const spesaPerRuolo: BudgetPerRuolo = { P: 0, D: 0, C: 0, A: 0 };
+  for (const s of slot) spesaPerRuolo[s.ruolo] += s.prezzo;
+
   return {
     slot,
     spesaTotale,
     entroBudget: spesaTotale <= setup.creditiBase,
+    spesaPerRuolo,
+    slotCoperti,
+    slotTotali: slotTotaliAttesi,
+    quotaMassima: quotaMax,
     rating: { coperturaSlot, concentrazioneSpesa },
   };
 }

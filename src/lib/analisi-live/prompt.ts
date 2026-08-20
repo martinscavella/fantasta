@@ -184,7 +184,7 @@ function sezioneObiettivi(stato: StatoAsta, metriche: MetricheCalcolate, registr
       const nomeObiettivo = obiettivo != null ? nomeGiocatore(obiettivo, registro) : "nessuno";
       const disponibile = obiettivo != null ? idDisponibili.has(obiettivo) : false;
       const alternative = (so.alternative ?? []).map((id) => nomeGiocatore(id, registro)).join(", ") || "nessuna";
-      return `- ${so.ruolo} slot #${so.indiceSlot}: obiettivo ${nomeObiettivo} (id ${obiettivo ?? "-"}, ${disponibile ? "disponibile" : "NON più disponibile"}), tetto attuale ${tetto}, prezzoStimatoMercato ${stima?.prezzoStimato ?? "?"}, nRivaliAttivi ${stima?.nRivaliAttivi ?? "?"}, alternative: ${alternative}`;
+      return `- ${so.ruolo} slot #${so.indiceSlot}: obiettivo ${nomeObiettivo} (id ${obiettivo ?? "-"}, ${disponibile ? "ACQUISTABILE" : "GIA PRESO — fuori dall asta"}), tetto attuale ${tetto}, prezzoStimatoMercato ${stima?.prezzoStimato ?? "?"}, nRivaliAttivi ${stima?.nRivaliAttivi ?? "?"}, alternative: ${alternative}`;
     })
     .join("\n");
 }
@@ -269,7 +269,10 @@ ${sezioneNotePersonali(stato)}
 ### Rose avversarie
 ${stato.avversari.map((a) => `- ${a.nome}: ${elencoCompattoRosa(a.rosa, registro)}`).join("\n")}
 
-## MIEI OBIETTIVI ANCORA DISPONIBILI
+## I MIEI SLOT E I LORO OBIETTIVI
+Ogni riga dice se l obiettivo di quello slot e ancora acquistabile. Per gli slot marcati
+GIA PRESO il giocatore non e piu in asta: non proporlo in consigliChiamata, non
+aggiornargli il prezzo massimo, usa verdetto "gia-perso" e ragiona sulle alternative.
 ${sezioneObiettivi(stato, metriche, registro)}
 
 ## ALTRI DISPONIBILI RILEVANTI

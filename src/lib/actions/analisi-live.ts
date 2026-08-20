@@ -100,9 +100,59 @@ export async function generaPromptAnalisiLive(
   return { ok: true, prompt: costruisciPromptAnalisiLive(contesto.stato, metriche, contesto.registro) };
 }
 
+export type PianoApplicato = { prezzi: number; slot: number };
+
 export type EsitoApplicaAnalisiLive =
-  | { ok: true; analisi: AnalisiAstaLive; nomiPerId: Record<number, string> }
+  | { ok: true; analisi: AnalisiAstaLive; nomiPerId: Record<number, string>; applicato: PianoApplicato }
   | { ok: false; error: string };
+
+/**
+ * Scrive prezzi massimi e obiettivi di slot dell'analisi dentro la Strategia.
+ * Condiviso tra l'applicazione automatica (applicaAnalisiLive) e il bottone
+ * di riapplicazione manuale: una sola implementazione, così i due percorsi
+ * non possono divergere.
+ *
+ * Non tocca `budgetReparto`: `pianoAggiornato.budgetResiduoReparto` è il
+ * budget RESIDUO sui reparti ancora aperti (§4.5 del motore), un concetto
+ * diverso da `StrategyDoc.budgetReparto` (la ripartizione ORIGINALE
+ * dell'intero budget di lega, usata per il ricalcolo automatico delle
+ * percentuali in fase di preparazione — vedi src/lib/strategia/budget.ts).
+ * Scriverci sopra il residuo perderebbe silenziosamente il piano originale e
+ * falserebbe lo scostamento nel Riepilogo.
+ */
+async function scriviPianoInStrategia(
+  astaId: string,
+  pianoAggiornato: AnalisiAstaLive["pianoAggiornato"],
+): Promise<PianoApplicato> {
+  await updateStrategy(astaId, { astaId, ...STRATEGY_FALLBACK_VUOTO }, (current) => {
+    const prezziPerId = new Map(current.prezziMassimi.map((p) => [p.playerId, p]));
+    for (const p of pianoAggiornato.prezziMassimiAggiornati) {
+      prezziPerId.set(p.playerId, { playerId: p.playerId, valore: p.valore, origine: "ia" as const });
+    }
+
+    const slotPerChiave = new Map(current.slotObiettivi.map((s) => [`${s.ruolo}#${s.indiceSlot}`, s]));
+    for (const s of pianoAggiornato.slotObiettiviAggiornati) {
+      slotPerChiave.set(`${s.ruolo}#${s.indiceSlot}`, {
+        ruolo: s.ruolo,
+        indiceSlot: s.indiceSlot,
+        obiettivoPrincipale: s.obiettivoPrincipale,
+        alternative: s.alternative,
+      });
+    }
+
+    return {
+      ...current,
+      prezziMassimi: [...prezziPerId.values()],
+      slotObiettivi: [...slotPerChiave.values()],
+      updatedAt: Date.now(),
+    };
+  });
+
+  return {
+    prezzi: pianoAggiornato.prezziMassimiAggiornati.length,
+    slot: pianoAggiornato.slotObiettiviAggiornati.length,
+  };
+}
 
 /**
  * Valida il JSON incollato dall'utente e lo riconcilia [D] coi numeri esatti
@@ -128,52 +178,31 @@ export async function applicaAnalisiLive(
 
   await putAnalisiLive({ astaId, fase, analisi, updatedAt: Date.now() });
 
-  return { ok: true, analisi, nomiPerId: contesto.nomiPerId };
+  // Il piano finisce nella Strategia senza un passo in più: i prezzi massimi
+  // ricalibrati servono al Tracker (prezzoReattivo e striscia consiglio li
+  // leggono da lì), e un'analisi che resta a schermo senza toccarli non
+  // cambia nulla di ciò che vedi mentre l'asta va avanti. È sicuro perché i
+  // valori sono già passati da riconcilia: tetti clampati, giocatori già
+  // venduti scartati.
+  const applicato = await scriviPianoInStrategia(astaId, analisi.pianoAggiornato);
+
+  return { ok: true, analisi, nomiPerId: contesto.nomiPerId, applicato };
 }
 
 export type EsitoApplicaPiano = { ok: true } | { ok: false; error: string };
 
 /**
- * Applica al piano SOLO i campi concreti e azionabili di `pianoAggiornato`:
- * prezzi massimi (upsert per playerId, origine "ia" — stessa convenzione di
- * applicaStrategiaGenerata) e obiettivi di slot (upsert per ruolo+indiceSlot).
- *
- * Non tocca `budgetReparto`: `pianoAggiornato.budgetResiduoReparto` è il
- * budget RESIDUO sui reparti ancora aperti (§4.5 del motore), un concetto
- * diverso da `StrategyDoc.budgetReparto` (la ripartizione ORIGINALE
- * dell'intero budget di lega, usata per il ricalcolo automatico delle
- * percentuali in fase di preparazione — vedi src/lib/strategia/budget.ts).
- * Scriverci sopra il residuo perderebbe silenziosamente il piano originale.
+ * Riapplica alla Strategia un'analisi già validata — serve quando si ripesca
+ * l'ultima analisi da Blob dopo un ricaricamento e la si vuole rimandare nel
+ * piano senza rigenerare il prompt. Il percorso normale non passa di qui:
+ * applicaAnalisiLive scrive già da sé (vedi scriviPianoInStrategia).
  */
 export async function applicaPianoAllaStrategia(astaId: string, analisi: AnalisiAstaLive): Promise<EsitoApplicaPiano> {
   const parsed = AnalisiAstaLiveSchema.safeParse(analisi);
   if (!parsed.success) return { ok: false, error: "Analisi non valida." };
-  const { pianoAggiornato } = parsed.data;
 
   try {
-    await updateStrategy(astaId, { astaId, ...STRATEGY_FALLBACK_VUOTO }, (current) => {
-      const prezziPerId = new Map(current.prezziMassimi.map((p) => [p.playerId, p]));
-      for (const p of pianoAggiornato.prezziMassimiAggiornati) {
-        prezziPerId.set(p.playerId, { playerId: p.playerId, valore: p.valore, origine: "ia" as const });
-      }
-
-      const slotPerChiave = new Map(current.slotObiettivi.map((s) => [`${s.ruolo}#${s.indiceSlot}`, s]));
-      for (const s of pianoAggiornato.slotObiettiviAggiornati) {
-        slotPerChiave.set(`${s.ruolo}#${s.indiceSlot}`, {
-          ruolo: s.ruolo,
-          indiceSlot: s.indiceSlot,
-          obiettivoPrincipale: s.obiettivoPrincipale,
-          alternative: s.alternative,
-        });
-      }
-
-      return {
-        ...current,
-        prezziMassimi: [...prezziPerId.values()],
-        slotObiettivi: [...slotPerChiave.values()],
-        updatedAt: Date.now(),
-      };
-    });
+    await scriviPianoInStrategia(astaId, parsed.data.pianoAggiornato);
   } catch {
     return { ok: false, error: "Impossibile applicare il piano alla strategia." };
   }

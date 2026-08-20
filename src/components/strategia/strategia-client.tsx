@@ -95,6 +95,7 @@ export function StrategiaClient({
         <BudgetEditor
           budget={strategy.budgetReparto}
           creditiBase={setup.creditiBase}
+          slot={setup.slot}
           onChange={(budgetReparto) => aggiorna({ budgetReparto })}
           onTemplate={(template: TemplateStrategia) =>
             aggiorna({ budgetReparto: applicaTemplate(template, setup.creditiBase), template })
@@ -122,12 +123,17 @@ export function StrategiaClient({
         <PrezziMassimiTable
           giocatori={giocatori}
           prezziMassimi={strategy.prezziMassimi}
+          fasce={strategy.fasce}
           creditiBase={setup.creditiBase}
           onChange={(prezziMassimi) => aggiorna({ prezziMassimi })}
         />
       </SectionCard>
 
-      <SectionCard title="Simula rosa" description="Costruisci la rosa dai tuoi obiettivi e verifica copertura slot e budget." icon={Wand2}>
+      <SectionCard
+        title="Simula rosa"
+        description="La rosa che esce dai tuoi obiettivi, sempre aggiornata: quanto costa, come si distribuisce tra i reparti e dove il piano non regge."
+        icon={Wand2}
+      >
         <SimulaRosaPanel setup={setup} giocatori={giocatori} strategy={strategy} />
       </SectionCard>
     </div>
