@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BlobPreconditionFailedError } from "@vercel/blob";
 import { z } from "zod";
-import { ConflictError, readDoc, updateDoc, writeDoc } from "@/lib/blob/repository";
+import { ConflictError, deleteAstaBlobs, readDoc, updateDoc, writeDoc } from "@/lib/blob/repository";
 
-const { get, put } = vi.hoisted(() => ({
+const { get, put, del } = vi.hoisted(() => ({
   get: vi.fn(),
   put: vi.fn(),
+  del: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@vercel/blob")>();
-  return { ...actual, get, put };
+  return { ...actual, get, put, del };
 });
 
 const DocSchema = z.object({ count: z.number() });
@@ -22,6 +23,7 @@ function streamOf(data: unknown) {
 beforeEach(() => {
   get.mockReset();
   put.mockReset();
+  del.mockReset();
 });
 
 describe("readDoc", () => {
@@ -35,6 +37,17 @@ describe("readDoc", () => {
     const result = await readDoc("x.json", DocSchema);
     expect(result).toEqual({ data: { count: 3 }, etag: "abc" });
     expect(get).toHaveBeenCalledWith("x.json", { access: "private", useCache: false });
+  });
+
+  it("normalizza un ETag weak (prefisso W/) alla forma strong", async () => {
+    // get() può restituire un ETag "weak" anche su una lettura fresca (capita
+    // quando la risposta passa dal layer di compressione edge di Vercel), ma
+    // il backend confronta ifMatch sulla forma strong: senza questa
+    // normalizzazione ogni scrittura condizionale fallisce sempre, anche a
+    // documento appena letto e invariato (visto in produzione).
+    get.mockResolvedValue({ stream: streamOf({ count: 3 }), blob: { etag: 'W/"abc"' } });
+    const result = await readDoc("x.json", DocSchema);
+    expect(result?.etag).toBe('"abc"');
   });
 
   it("propaga l'errore di validazione zod su un documento corrotto", async () => {
@@ -101,5 +114,19 @@ describe("updateDoc", () => {
       updateDoc("x.json", DocSchema, { count: 0 }, (c) => ({ count: c.count + 1 }), { maxRetries: 2 }),
     ).rejects.toThrow(ConflictError);
     expect(put).toHaveBeenCalledTimes(3); // 1 tentativo iniziale + 2 retry
+  });
+});
+
+describe("deleteAstaBlobs", () => {
+  it("cancella tutti i documenti dell'asta in un'unica chiamata a del", async () => {
+    del.mockResolvedValue(undefined);
+    await deleteAstaBlobs("asta-1");
+    expect(del).toHaveBeenCalledWith([
+      "aste/asta-1/setup.json",
+      "aste/asta-1/strategy.json",
+      "aste/asta-1/board.json",
+      "aste/asta-1/debrief.json",
+      "aste/asta-1/analisi-live.json",
+    ]);
   });
 });

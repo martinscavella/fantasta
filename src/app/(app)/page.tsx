@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, FileText, Gavel, Table2, Upload, type LucideIcon } from "lucide-react";
+import { BarChart3, FileText, FileUp, Gavel, Table2, Upload, type LucideIcon } from "lucide-react";
 
 // Dentro il route group (app) per ereditare l'header con la nav. Nessuna
 // lettura da Blob: la home deve restare raggiungibile anche quando lo store
@@ -10,6 +10,12 @@ const SEZIONI: { href: string; titolo: string; descrizione: string; icon: Lucide
     titolo: "Aste",
     descrizione: "Crea un'asta o riprendi il tracker di una in corso.",
     icon: Gavel,
+  },
+  {
+    href: "/asta/importa",
+    titolo: "Importa asta conclusa",
+    descrizione: "Ricostruisci un'asta già giocata dal file per fantaleghe, rose e prezzi inclusi.",
+    icon: FileUp,
   },
   {
     href: "/listone",

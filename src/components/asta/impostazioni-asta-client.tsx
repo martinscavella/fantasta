@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Heart, Users } from "lucide-react";
+import { useRef, useState } from "react";
+import { Heart, ShieldAlert, Star, Users } from "lucide-react";
 import { AstaSubNav } from "@/components/asta/asta-sub-nav";
+import { EliminaAstaButton } from "@/components/asta/elimina-asta-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionCard } from "@/components/shared/section-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { aggiornaSquadre } from "@/lib/actions/aste";
+import { aggiornaSquadre, impostaMiaSquadra } from "@/lib/actions/aste";
 import type { SetupDoc, Squadra } from "@/lib/blob/schemas";
 
 // Personalizzazioni per squadra (§ Impostazioni asta nel piano): allenatore e
@@ -29,6 +31,35 @@ export function ImpostazioniAstaClient({ setup }: { setup: SetupDoc }) {
   const [salvata, setSalvata] = useState(true);
   const [pending, setPending] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+
+  // "La tua squadra" cambia con un'azione a sé, separata dal salvataggio
+  // batched dei campi di personalizzazione: è una scelta singola, non testo
+  // che si accumula prima di premere Salva.
+  const [miaSquadraId, setMiaSquadraId] = useState(setup.miaSquadraId);
+  const [pendingMiaSquadra, setPendingMiaSquadra] = useState(false);
+  const [erroreMiaSquadra, setErroreMiaSquadra] = useState<string | null>(null);
+  // Un ref, non lo state `pendingMiaSquadra`: aggiorna sincrono, quindi
+  // blocca anche due onValueChange che il Select potesse emettere nello
+  // stesso giro prima che React applichi il primo setPendingMiaSquadra —
+  // due scritture così ravvicinate su setup.json sono la causa più probabile
+  // di un ConflictError che esaurisce i retry di updateDoc.
+  const inVoloMiaSquadra = useRef(false);
+
+  async function cambiaMiaSquadra(teamId: string) {
+    if (inVoloMiaSquadra.current || teamId === miaSquadraId) return;
+    inVoloMiaSquadra.current = true;
+    const precedente = miaSquadraId;
+    setMiaSquadraId(teamId);
+    setErroreMiaSquadra(null);
+    setPendingMiaSquadra(true);
+    const esito = await impostaMiaSquadra(setup.id, teamId);
+    inVoloMiaSquadra.current = false;
+    setPendingMiaSquadra(false);
+    if (!esito.ok) {
+      setMiaSquadraId(precedente);
+      setErroreMiaSquadra(esito.error);
+    }
+  }
 
   function aggiorna(id: string, campo: CampoModificabile, valore: string) {
     setSquadre((prev) => prev.map((s) => (s.id === id ? { ...s, [campo]: valore } : s)));
@@ -65,6 +96,24 @@ export function ImpostazioniAstaClient({ setup }: { setup: SetupDoc }) {
       />
       {errore && <p className="text-sm text-destructive">{errore}</p>}
 
+      <SectionCard title="La tua squadra" description="Determina di chi Strategia e Riepilogo calcolano scostamento e prezzi massimi." icon={Star}>
+        <div className="flex flex-col gap-1.5 sm:w-64">
+          <Select value={miaSquadraId} onValueChange={(v) => v && void cambiaMiaSquadra(v)}>
+            <SelectTrigger size="sm" disabled={pendingMiaSquadra}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {squadre.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {erroreMiaSquadra && <p className="text-sm text-destructive">{erroreMiaSquadra}</p>}
+        </div>
+      </SectionCard>
+
       <SectionCard
         title="Squadre"
         description="Allenatore e note sono solo un promemoria. La squadra del cuore no: l'Analisi live la usa per prevedere un possibile sovrapprezzo sui giocatori di quel club."
@@ -75,7 +124,7 @@ export function ImpostazioniAstaClient({ setup }: { setup: SetupDoc }) {
             <div key={s.id} className="flex flex-col gap-3 rounded-xl border border-border/60 p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{s.nome}</span>
-                {s.id === setup.miaSquadraId && <Badge variant="outline">la tua squadra</Badge>}
+                {s.id === miaSquadraId && <Badge variant="outline">la tua squadra</Badge>}
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
@@ -113,6 +162,14 @@ export function ImpostazioniAstaClient({ setup }: { setup: SetupDoc }) {
             </div>
           ))}
         </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Zona pericolosa"
+        description="Cancella definitivamente questa asta: setup, rose, strategia e ogni altro dato collegato. Non si può annullare."
+        icon={ShieldAlert}
+      >
+        <EliminaAstaButton astaId={setup.id} nomeAsta={setup.nome} variant="destructive" />
       </SectionCard>
     </div>
   );

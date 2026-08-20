@@ -154,6 +154,12 @@ Il cuore dell'app. Layout denso, tutto raggiungibile da tastiera.
 
 Rosa finale, spesa per reparto, scostamento dalla strategia pianificata, confronto delle rose di tutta la lega, export JSON/CSV. In modalità sforo, anche il conto finale in euro per ogni partecipante.
 
+**Import di un'asta giocata altrove** (`/asta/importa`): se l'asta si è svolta su un'altra piattaforma, il "file per fantaleghe" di Fantacalcio.it la ricostruisce senza ribattere nulla a mano. È un CSV senza intestazione, tre colonne posizionali (`fantasquadra,idGiocatore,prezzo`) con i blocchi separati da una riga `$,$,$`; gli id sono quelli del listone ufficiale, quindi coincidono con `Player.id`.
+
+Il regolamento non è nel file e va configurato a mano — ed è lì che sta l'unico vero rischio. Il reducer **scarta in silenzio** gli `ASSIGN` che sforano `creditiBase` a budget chiuso o riempiono uno slot già pieno: con crediti sbagliati l'import sembrerebbe riuscito e le rose risulterebbero mutilate. Per questo l'anteprima non stima nulla, fa girare `reduceBoard` sugli eventi candidati e confronta gli applicati coi totali; se non tornano, il commit è bloccato e la UI indica i minimi compatibili ricavati dal file (crediti e slot per ruolo). Le anomalie nei dati (id fuori listone, giocatore in due rose) non bloccano ma richiedono una conferma esplicita.
+
+Sul file reale della lega — 10 squadre, 25 giocatori, totali 1030–1100 — la differenza è netta: a 1000 crediti chiusi passano 237 assegnazioni su 250, a 1000 a sforo o a 1100 chiusi passano tutte e 250.
+
 ---
 
 ## Modalità sforo
@@ -357,7 +363,7 @@ Ordinate per percorso critico: l'app deve essere **utilizzabile a un'asta reale 
 | 7 | Scraping | Adapter fonti, pipeline name-matching, coda revisione alias, cron, indicatore freshness |
 | 7b | **Ponte IA** | Schemi zod → JSON Schema nel prompt, generatore di strategia, dossier a blocchi con avanzamento, debrief. Copia prompt / incolla risposta / validazione. **Nessuna API** |
 | 8 | Data center | Scheda giocatore, trend, xG/xA, alternative simili, confronto |
-| 9 | Post-asta | Riepilogo, scostamento da strategia, export |
+| 9 | Post-asta | Riepilogo, scostamento da strategia, export, **import di un'asta giocata altrove** dal file per fantaleghe |
 | 10 | *(opzionale)* Analisi live | Solo se la vuoi: `@anthropic-ai/sdk`, Route Handler in streaming, prompt caching 1h, chiave API. È l'unica fase che introduce un costo |
 
 ---
@@ -437,6 +443,6 @@ npm run e2e
 
 ## Assunzioni da validare
 
-1. **Formato dei listoni.** Le colonne esatte del file `.xlsx` 2026/27 non sono confermabili senza il file in mano, e il formato dell'export di Fanta Club non è documentato pubblicamente. Il mapping guidato in UI è progettato proprio per non doverlo sapere in anticipo, ma **servono entrambi i file come fixture di test** — quello ufficiale e quello che scarichi da Fanta Club.
+1. **Formato dei listoni.** Le colonne esatte del file `.xlsx` 2026/27 non sono confermabili senza il file in mano, e il formato dell'export di Fanta Club non è documentato pubblicamente. Il mapping guidato in UI è progettato proprio per non doverlo sapere in anticipo, ma **servono entrambi i file come fixture di test** — quello ufficiale e quello che scarichi da Fanta Club. Il formato delle *rose* è invece confermato: `e2e/fixtures/file_per_fantaleghe.csv` è un export reale.
 
 2. **Tasso di cambio dello sforo.** Il piano assume che i crediti extra si paghino a un tasso fisso configurabile (€ per credito). Se la tua lega usa una formula diversa — scaglioni, quota fissa a prescindere dall'entità, tetto oltre il quale non si può andare — va detto prima della fase 4, perché è nel reducer.

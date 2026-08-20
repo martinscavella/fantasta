@@ -1,4 +1,4 @@
-import { get, put, BlobPreconditionFailedError } from "@vercel/blob";
+import { del, get, put, BlobPreconditionFailedError } from "@vercel/blob";
 import type { z, ZodType } from "zod";
 import {
   AliasesDocSchema,
@@ -45,6 +45,21 @@ export class ConflictError extends Error {
 type Doc<T> = { data: T; etag: string };
 
 /**
+ * `get()` può restituire un ETag "weak" (prefisso `W/`) anche su una lettura
+ * fresca (`useCache:false`) — capita quando la risposta passa dal layer di
+ * compressione della rete edge di Vercel, non è un segnale di staleness.
+ * `head()` sullo stesso blob restituisce invece la forma "strong" (senza
+ * `W/`), ed è quella che il backend confronta per `ifMatch`: senza
+ * normalizzare, ogni scrittura condizionale fallisce con
+ * `BlobPreconditionFailedError` anche a documento appena letto e invariato —
+ * il retry di updateDoc non la risolve, perché ogni rilettura restituisce di
+ * nuovo la forma weak.
+ */
+function etagForte(etag: string): string {
+  return etag.startsWith("W/") ? etag.slice(2) : etag;
+}
+
+/**
  * Legge e valida un documento mutabile. `useCache: false` bypassa la CDN:
  * senza, un overwrite può impiegare fino a 60s a propagarsi (vedi piano).
  */
@@ -55,7 +70,7 @@ export async function readDoc<S extends ZodType>(
   const result = await get(pathname, { access: ACCESS, useCache: false });
   if (!result) return null;
   const text = await new Response(result.stream).text();
-  return { data: schema.parse(JSON.parse(text)), etag: result.blob.etag };
+  return { data: schema.parse(JSON.parse(text)), etag: etagForte(result.blob.etag) };
 }
 
 /**
@@ -215,6 +230,23 @@ export function updateAsteIndex(mutate: (current: AsteIndex) => AsteIndex) {
 
 export function getSetup(astaId: string) {
   return readDoc(paths.setup(astaId), SetupDocSchema);
+}
+
+/**
+ * Cancella tutti i documenti di un'asta (setup, strategy, board, debrief,
+ * analisi-live). `del` è idempotente sui pathname assenti (strategy/debrief/
+ * analisi-live esistono solo se quella fase è stata usata), quindi non serve
+ * verificarne prima l'esistenza. Non tocca aste/index.json: è compito del
+ * chiamante toglierne la entry (vedi eliminaAsta in actions/aste.ts).
+ */
+export function deleteAstaBlobs(astaId: string) {
+  return del([
+    paths.setup(astaId),
+    paths.strategy(astaId),
+    paths.board(astaId),
+    paths.debrief(astaId),
+    paths.analisiLive(astaId),
+  ]);
 }
 
 export function putSetup(doc: SetupDoc) {

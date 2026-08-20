@@ -1,9 +1,25 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { getListoneIndex, putSetup, updateAsteIndex, updateSetup } from "@/lib/blob/repository";
-import { SetupDocSchema, type Squadra } from "@/lib/blob/schemas";
+import { costruisciSetup, salvaNuovaAsta } from "@/lib/asta/crea";
+import { ConflictError, deleteAstaBlobs, getListoneIndex, getSetup, updateAsteIndex, updateSetup } from "@/lib/blob/repository";
+import type { Squadra } from "@/lib/blob/schemas";
+
+/**
+ * Le scritture su setup.json e aste/index.json usano concorrenza ottimistica
+ * (ifMatch + retry automatico dentro updateDoc — vedi blob/repository.ts). Un
+ * ConflictError arriva qui solo quando anche i retry sono stati esauriti: una
+ * vera collisione (due schede aperte, o due azioni partite quasi insieme),
+ * non un bug da mostrare come messaggio tecnico — si traduce in un invito a
+ * ricaricare e riprovare, coerente con "si rilegge, si fa merge e si riprova"
+ * del piano.
+ */
+function messaggioErrore(err: unknown): string {
+  if (err instanceof ConflictError) {
+    return "Un'altra modifica è in corso su questa asta: ricarica la pagina e riprova.";
+  }
+  return err instanceof Error ? err.message : "Errore imprevisto.";
+}
 
 export type CreaAstaState = { error?: string } | undefined;
 
@@ -36,31 +52,23 @@ export async function creaAsta(_prevState: CreaAstaState, formData: FormData): P
     return { error: "Indica quale squadra è la tua" };
   }
 
-  const squadre = nomiSquadre.map((n) => ({ id: randomUUID(), nome: n }));
-
   let setup;
   try {
-    setup = SetupDocSchema.parse({
-      id: randomUUID(),
+    setup = costruisciSetup({
       nome,
       stagione,
       listoneVersionId: index.data.current,
-      modalita: "classic",
       creditiBase,
       slot: { P: slotP, D: slotD, C: slotC, A: slotA },
-      squadre,
-      miaSquadraId: squadre[miaSquadraIndex].id,
+      nomiSquadre,
+      miaSquadraIndex,
       sforo: sforoTipo === "a-pagamento" ? { tipo: "a-pagamento", euroPerCredito } : { tipo: "nessuno" },
-      createdAt: Date.now(),
     });
   } catch {
     return { error: "Dati non validi: controlla crediti e slot (numeri interi positivi)" };
   }
 
-  await putSetup(setup);
-  await updateAsteIndex((current) => ({
-    aste: [...current.aste, { id: setup.id, nome: setup.nome, stagione: setup.stagione, createdAt: setup.createdAt }],
-  }));
+  await salvaNuovaAsta(setup);
 
   redirect(`/asta/${setup.id}`);
 }
@@ -78,10 +86,60 @@ export async function aggiornaSquadre(
   astaId: string,
   modifiche: Record<string, Pick<Squadra, "allenatore" | "squadraDelCuore" | "note">>,
 ): Promise<AggiornaSquadreResult> {
-  const risultato = await updateSetup(astaId, (current) => ({
-    ...current,
-    squadre: current.squadre.map((s) => (modifiche[s.id] ? { ...s, ...modifiche[s.id] } : s)),
-  }));
-  if (!risultato) return { ok: false, error: "Asta non trovata." };
-  return { ok: true };
+  try {
+    const risultato = await updateSetup(astaId, (current) => ({
+      ...current,
+      squadre: current.squadre.map((s) => (modifiche[s.id] ? { ...s, ...modifiche[s.id] } : s)),
+    }));
+    if (!risultato) return { ok: false, error: "Asta non trovata." };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: messaggioErrore(err) };
+  }
+}
+
+export type ImpostaMiaSquadraResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Cambia quale squadra tra quelle esistenti è "la mia" (SetupDoc.miaSquadraId
+ * — vedi § Preparazione/Post-asta nel piano: è la squadra di cui Strategia e
+ * Riepilogo calcolano scostamento e prezzi massimi). Non tocca l'elenco
+ * squadre: quello resta fisso dalla creazione, solo il puntatore cambia.
+ */
+export async function impostaMiaSquadra(astaId: string, teamId: string): Promise<ImpostaMiaSquadraResult> {
+  try {
+    const risultato = await updateSetup(astaId, (current) => {
+      if (!current.squadre.some((s) => s.id === teamId)) {
+        throw new Error("Squadra non valida.");
+      }
+      return { ...current, miaSquadraId: teamId };
+    });
+    if (!risultato) return { ok: false, error: "Asta non trovata." };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: messaggioErrore(err) };
+  }
+}
+
+export type EliminaAstaResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Cancella un'asta: tutti i suoi documenti su Blob (setup, strategy, board,
+ * debrief, analisi-live — vedi deleteAstaBlobs) e la entry in aste/index.json.
+ * Azione distruttiva e irreversibile: il chiamante deve aver già ottenuto
+ * conferma dall'utente prima di invocarla (vedi EliminaAstaButton).
+ */
+export async function eliminaAsta(astaId: string): Promise<EliminaAstaResult> {
+  const setup = await getSetup(astaId);
+  if (!setup) return { ok: false, error: "Asta non trovata." };
+
+  try {
+    await deleteAstaBlobs(astaId);
+    await updateAsteIndex((current) => ({
+      aste: current.aste.filter((a) => a.id !== astaId),
+    }));
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: messaggioErrore(err) };
+  }
 }
