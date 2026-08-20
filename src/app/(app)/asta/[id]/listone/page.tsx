@@ -55,7 +55,7 @@ export default async function AstaListonePage({ params }: PageProps<"/asta/[id]/
         title="Listone"
         description="I giocatori già assegnati in questa asta restano in elenco, sbarrati, con squadra e prezzo — così sai sempre chi è ancora libero."
         actions={
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/asta/${setup.data.id}/analisi-live`} />}>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/asta/${setup.data.id}/ai`} />}>
             <Sparkles />
             Analisi live
           </Button>

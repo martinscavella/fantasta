@@ -18,30 +18,20 @@ function pillCreditiClasse(creditiResidui: number, creditiBase: number): string 
   return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
 }
 
-export type EleggibilitaSquadra = { ok: boolean; motivo: string | null };
-
 // Layout a colonne fisse (una per squadra) con bande di ruolo che attraversano
 // tutte le colonne alla stessa altezza — le rose sono sempre visibili per
 // intero, nessun accordion da aprire per confrontare due squadre.
 export function TeamsGrid({
   squadre,
   rose,
-  eleggibilita,
-  onAssegnaSquadra,
   flashTeamId,
 }: {
   squadre: StatoSquadraDerivato[];
   rose: Record<string, RigaRosa[]>;
-  // Non-null = un'assegnazione è in corso (giocatore + prezzo già scelti nel
-  // pannello a sinistra): le colonne diventano il selettore della squadra,
-  // non serve un'altra lista separata per farlo (vedi § Tracker d'asta nel piano).
-  eleggibilita?: Map<string, EleggibilitaSquadra> | null;
-  onAssegnaSquadra?: (teamId: string) => void;
   // Id della squadra appena assegnata: un lampo verde temporaneo conferma
   // visivamente l'azione senza dover leggere il log sotto.
   flashTeamId?: string | null;
 }) {
-  const modalitaAssegnazione = eleggibilita != null;
   const modalitaSforo = squadre.some((t) => t.massimaOfferta === null);
 
   return (
@@ -51,31 +41,11 @@ export function TeamsGrid({
           const pctSpeso = team.creditiBase > 0 ? Math.min(100, (team.creditiSpesi / team.creditiBase) * 100) : 0;
           const righeRosa = rose[team.teamId] ?? [];
 
-          const elig = eleggibilita?.get(team.teamId) ?? null;
-          const cliccabile = modalitaAssegnazione && elig?.ok === true;
-
           return (
             <div
               key={team.teamId}
-              role={cliccabile ? "button" : undefined}
-              tabIndex={cliccabile ? 0 : undefined}
-              onClick={cliccabile ? () => onAssegnaSquadra?.(team.teamId) : undefined}
-              onKeyDown={
-                cliccabile
-                  ? (e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onAssegnaSquadra?.(team.teamId);
-                      }
-                    }
-                  : undefined
-              }
               className={cn(
                 "flex w-48 shrink-0 flex-col border-r border-border transition-all duration-700 last:border-r-0",
-                modalitaAssegnazione &&
-                  (cliccabile
-                    ? "cursor-pointer bg-primary/5 ring-2 ring-inset ring-primary/40 hover:bg-primary/10"
-                    : "cursor-not-allowed opacity-40"),
                 team.teamId === flashTeamId && "bg-emerald-500/10 ring-2 ring-inset ring-emerald-500",
               )}
             >
@@ -103,11 +73,7 @@ export function TeamsGrid({
                     style={{ width: `${team.creditiResidui < 0 ? 100 : pctSpeso}%` }}
                   />
                 </div>
-                {modalitaAssegnazione ? (
-                  <p className={cn("text-[11px] font-semibold", cliccabile ? "text-primary" : "text-destructive")}>
-                    {cliccabile ? "Assegna qui →" : elig?.motivo}
-                  </p>
-                ) : team.massimaOfferta !== null ? (
+                {team.massimaOfferta !== null ? (
                   <p className="text-[11px] text-muted-foreground">
                     Max <span className="font-mono font-semibold text-primary">{team.massimaOfferta}</span>
                   </p>

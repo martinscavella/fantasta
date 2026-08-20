@@ -5,6 +5,7 @@ import { ChevronLeft, SkipForward, TrendingDown, TrendingUp } from "lucide-react
 import { useAstaStore, caricaEIniziaAsta } from "@/stores/asta-store";
 import { reduceBoard } from "@/lib/asta/reducer";
 import { costruisciRose, derivaInflazione, derivaSquadre } from "@/lib/asta/derive";
+import { consigliaGiocatore, consigliaProssimo, type ContestoConsiglio } from "@/lib/asta/consiglio";
 import {
   fasciaStandard,
   prezzoMassimoDefault,
@@ -13,7 +14,9 @@ import {
   type FasciaStandard,
 } from "@/lib/pricing";
 import { AstaSubNav } from "@/components/asta/asta-sub-nav";
-import { TeamsGrid, type EleggibilitaSquadra } from "@/components/asta/teams-grid";
+import { TeamsGrid } from "@/components/asta/teams-grid";
+import { PannelloAssegnazione, type EsitoEleggibilita } from "@/components/asta/pannello-assegnazione";
+import { StrisciaConsiglio } from "@/components/asta/striscia-consiglio";
 import { EventLog, type VoceLog } from "@/components/asta/event-log";
 import { ClubBadge } from "@/components/shared/club-badge";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +25,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RUOLI, RUOLO_CLASSI, RUOLO_LABEL } from "@/lib/ruoli";
 import { cn } from "@/lib/utils";
-import type { BoardEvent, Player, PlayerStats, PrezzoMassimo, Ruolo, SetupDoc } from "@/lib/blob/schemas";
+import type {
+  BoardEvent,
+  DossierEntry,
+  Player,
+  PlayerStats,
+  Ruolo,
+  SetupDoc,
+  StrategyDoc,
+} from "@/lib/blob/schemas";
 
 const TUTTI = "_tutti";
 const FASCE: FasciaStandard[] = ["Top", "Semitop", "Terza fascia", "Scommesse"];
@@ -61,28 +72,27 @@ function caricaFiltriSalvati(astaId: string): FiltriSalvati {
   }
 }
 
-// Niente casella di ricerca: si scorre un giocatore alla volta nell'ordine
-// deciso dai filtri (ruolo/fascia/ordinamento), con Assegna o Skippa per
-// passare al successivo (§ Tracker d'asta nel piano). Squadre restano al
-// centro, sempre visibili; la scelta della squadra si fa cliccando la sua
-// colonna direttamente su TeamsGrid.
-type FaseAssegnazione =
-  | { tipo: "lista" }
-  | { tipo: "prezzo"; giocatore: Player }
-  | { tipo: "squadra"; giocatore: Player; prezzo: number };
+// Niente casella di ricerca per filtrare: si scorre un giocatore alla volta
+// nell'ordine deciso dai filtri (ruolo/fascia/ordinamento), con Assegna o
+// Skippa per passare al successivo (§ Tracker d'asta nel piano). Due fasi
+// sole: la coda, e il pannello di assegnazione dove prezzo e squadra si
+// scelgono insieme.
+type FaseAssegnazione = { tipo: "lista" } | { tipo: "assegna"; giocatore: Player };
 
 export function AstaClient({
   setup,
   giocatori,
   eventiIniziali,
-  prezziMassimi,
+  strategy,
   statistiche,
+  dossier,
 }: {
   setup: SetupDoc;
   giocatori: Player[];
   eventiIniziali: BoardEvent[];
-  prezziMassimi: PrezzoMassimo[];
+  strategy: StrategyDoc | null;
   statistiche: PlayerStats[];
+  dossier: DossierEntry[];
 }) {
   const events = useAstaStore((s) => s.events);
   const syncStatus = useAstaStore((s) => s.syncStatus);
@@ -99,7 +109,6 @@ export function AstaClient({
   const [cursore, setCursore] = useState(() => caricaFiltriSalvati(setup.id).cursore ?? 0);
   const [querySalto, setQuerySalto] = useState("");
   const [flashTeamId, setFlashTeamId] = useState<string | null>(null);
-  const prezzoRef = useRef<HTMLInputElement>(null);
   const saltoRef = useRef<HTMLInputElement>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -112,6 +121,7 @@ export function AstaClient({
     () => new Map(statistiche.filter((s) => s.playerId !== null).map((s) => [s.playerId!, s])),
     [statistiche],
   );
+  const dossierPerId = useMemo(() => new Map(dossier.map((d) => [d.playerId, d])), [dossier]);
   const ruoloPerGiocatore = useMemo(
     () => Object.fromEntries(giocatori.map((g) => [g.id, g.ruolo])) as Record<number, Ruolo>,
     [giocatori],
@@ -124,7 +134,10 @@ export function AstaClient({
     [astaState, setup, giocatori, events],
   );
 
-  const prezzoBasePerId = useMemo(() => new Map(prezziMassimi.map((p) => [p.playerId, p.valore])), [prezziMassimi]);
+  const prezzoBasePerId = useMemo(
+    () => new Map((strategy?.prezziMassimi ?? []).map((p) => [p.playerId, p.valore])),
+    [strategy],
+  );
   const prezzoReattivoPerId = useMemo(() => {
     const mappa = new Map<number, number>();
     for (const g of giocatori) {
@@ -188,6 +201,39 @@ export function AstaClient({
     [astaState, giocatori, setup.squadre],
   );
 
+  // --- Consiglio (§ C del piano UX): tutto deterministico, nessuna IA -------
+
+  const contestoConsiglio = useMemo<ContestoConsiglio | null>(() => {
+    const mia = squadreDerivate.find((s) => s.teamId === setup.miaSquadraId);
+    if (!mia) return null;
+
+    const spesaPerRuolo: Record<Ruolo, number> = { P: 0, D: 0, C: 0, A: 0 };
+    for (const riga of rose[setup.miaSquadraId] ?? []) spesaPerRuolo[riga.player.ruolo] += riga.price;
+
+    return {
+      setup,
+      squadra: mia,
+      strategy,
+      spesaPerRuolo,
+      inflazione: inflazione.effettiva,
+      dossierPerId,
+    };
+  }, [squadreDerivate, setup, rose, strategy, inflazione.effettiva, dossierPerId]);
+
+  // Il verdetto si valuta al prezzo massimo personale: è la domanda "vale la
+  // pena arrivarci?", non "conviene a questa cifra?" — quella la risponde il
+  // pannello di assegnazione mentre muovi il prezzo.
+  const consiglioCorrente = useMemo(() => {
+    if (!contestoConsiglio || !giocatoreCorrente) return null;
+    const prezzo = prezzoReattivoPerId.get(giocatoreCorrente.id) ?? giocatoreCorrente.quotazioneAttuale;
+    return consigliaGiocatore(giocatoreCorrente, prezzo, contestoConsiglio);
+  }, [contestoConsiglio, giocatoreCorrente, prezzoReattivoPerId]);
+
+  const consiglioProssimo = useMemo(
+    () => (contestoConsiglio ? consigliaProssimo(contestoConsiglio) : null),
+    [contestoConsiglio],
+  );
+
   const squadrePerId = useMemo(() => new Map(setup.squadre.map((s) => [s.id, s.nome])), [setup.squadre]);
   const vociLog: VoceLog[] = useMemo(() => {
     const tsPerEvento = new Map(events.filter((e) => e.type === "ASSIGN").map((e) => [e.id, e.ts]));
@@ -211,10 +257,6 @@ export function AstaClient({
     useAstaStore.getState().aggiungiEvento(event);
   }
 
-  function assegna(playerId: number, teamId: string, price: number) {
-    dispatch({ id: nuovoId(), ts: Date.now(), type: "ASSIGN", playerId, teamId, price });
-  }
-
   function annullaEvento(targetEventId: string) {
     dispatch({ id: nuovoId(), ts: Date.now(), type: "UNDO", targetEventId });
   }
@@ -226,10 +268,6 @@ export function AstaClient({
   function tornaAllaLista() {
     setFase({ tipo: "lista" });
     setQuerySalto("");
-  }
-
-  function selezionaGiocatore(g: Player) {
-    setFase({ tipo: "prezzo", giocatore: g });
   }
 
   function skippa() {
@@ -247,14 +285,9 @@ export function AstaClient({
     saltoRef.current?.blur();
   }
 
-  function confermaPrezzo(prezzo: number) {
-    if (fase.tipo !== "prezzo") return;
-    setFase({ tipo: "squadra", giocatore: fase.giocatore, prezzo });
-  }
-
-  function assegnaASquadra(teamId: string) {
-    if (fase.tipo !== "squadra") return;
-    assegna(fase.giocatore.id, teamId, fase.prezzo);
+  function assegnaASquadra(teamId: string, prezzo: number) {
+    if (fase.tipo !== "assegna") return;
+    dispatch({ id: nuovoId(), ts: Date.now(), type: "ASSIGN", playerId: fase.giocatore.id, teamId, price: prezzo });
     tornaAllaLista();
 
     setFlashTeamId(teamId);
@@ -262,18 +295,17 @@ export function AstaClient({
     flashTimerRef.current = setTimeout(() => setFlashTeamId(null), DURATA_FLASH_MS);
   }
 
-  // Idoneità di ogni squadra per l'assegnazione in corso, calcolata una volta
-  // sola e passata a TeamsGrid: le colonne diventano il selettore della
-  // squadra (§ Tracker d'asta nel piano), niente lista separata per farlo.
-  const eleggibilita = useMemo<Map<string, EleggibilitaSquadra> | null>(() => {
-    if (fase.tipo !== "squadra") return null;
-    const mappa = new Map<string, EleggibilitaSquadra>();
+  // Idoneità di ogni squadra per l'assegnazione in corso. Il budget si valuta
+  // sul prezzo proposto: nel pannello il prezzo può cambiare, ma una squadra
+  // esclusa per slot pieno lo resta comunque, ed è il caso che conta.
+  const eleggibilita = useMemo<Map<string, EsitoEleggibilita>>(() => {
+    const mappa = new Map<string, EsitoEleggibilita>();
+    if (fase.tipo !== "assegna") return mappa;
     for (const team of squadreDerivate) {
-      const residuo = team.slotResidui[fase.giocatore.ruolo];
-      if (residuo <= 0) {
-        mappa.set(team.teamId, { ok: false, motivo: `${fase.giocatore.ruolo} pieno` });
-      } else if (team.massimaOfferta !== null && team.creditiResidui < fase.prezzo) {
-        mappa.set(team.teamId, { ok: false, motivo: "budget insufficiente" });
+      if (team.slotResidui[fase.giocatore.ruolo] <= 0) {
+        mappa.set(team.teamId, { ok: false, motivo: `${fase.giocatore.ruolo} al completo` });
+      } else if (team.massimaOfferta !== null && team.massimaOfferta <= 0) {
+        mappa.set(team.teamId, { ok: false, motivo: "crediti esauriti" });
       } else {
         mappa.set(team.teamId, { ok: true, motivo: null });
       }
@@ -282,22 +314,10 @@ export function AstaClient({
   }, [fase, squadreDerivate]);
 
   useEffect(() => {
-    if (fase.tipo === "prezzo") prezzoRef.current?.focus();
-  }, [fase]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
     const filtri: FiltriSalvati = { ruolo: filtroRuolo, fascia: filtroFascia, ordinamento, cursore };
     window.localStorage.setItem(chiaveFiltri(setup.id), JSON.stringify(filtri));
   }, [setup.id, filtroRuolo, filtroFascia, ordinamento, cursore]);
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && fase.tipo !== "lista") tornaAllaLista();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [fase.tipo]);
 
   const statoLabel = {
     salvato: "dati salvati",
@@ -352,8 +372,16 @@ export function AstaClient({
         </div>
       </div>
 
-      {/* Filtri + giocatore corrente, uno alla volta, oppure step di prezzo/squadra in corso. */}
-      {fase.tipo === "lista" && (
+      {fase.tipo === "assegna" ? (
+        <PannelloAssegnazione
+          giocatore={fase.giocatore}
+          prezzoIniziale={prezzoReattivoPerId.get(fase.giocatore.id) ?? fase.giocatore.quotazioneAttuale}
+          squadre={squadreDerivate}
+          eleggibilita={eleggibilita}
+          onAssegna={assegnaASquadra}
+          onAnnulla={tornaAllaLista}
+        />
+      ) : (
         <div className="flex flex-col gap-3">
           <div className="relative">
             <Input
@@ -481,9 +509,12 @@ export function AstaClient({
             </div>
           ) : (
             <div className="animate-in fade-in-0 flex flex-col gap-4 rounded-2xl border-2 border-primary/25 bg-card p-5 shadow-md duration-150">
+              {consiglioCorrente && consiglioProssimo && (
+                <StrisciaConsiglio consiglio={consiglioCorrente} prossimo={consiglioProssimo} />
+              )}
+
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-semibold text-primary">Passo 1/3 · Scegli</span>
                   <span className="font-mono">
                     {cursoreValido + 1} di {liberiFiltrati.length}
                   </span>
@@ -526,13 +557,14 @@ export function AstaClient({
               </div>
 
               <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" size="icon" onClick={precedente} disabled={cursoreValido === 0}>
+                <Button type="button" variant="outline" size="icon-lg" onClick={precedente} disabled={cursoreValido === 0}>
                   <ChevronLeft />
                   <span className="sr-only">Precedente</span>
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
+                  size="lg"
                   onClick={skippa}
                   disabled={cursoreValido >= liberiFiltrati.length - 1}
                   className="flex-1 gap-1.5"
@@ -540,7 +572,12 @@ export function AstaClient({
                   <SkipForward className="size-3.5" />
                   Skippa
                 </Button>
-                <Button type="button" onClick={() => selezionaGiocatore(giocatoreCorrente)} className="flex-1">
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => setFase({ tipo: "assegna", giocatore: giocatoreCorrente })}
+                  className="flex-[2]"
+                >
                   Assegna
                 </Button>
               </div>
@@ -549,83 +586,10 @@ export function AstaClient({
         </div>
       )}
 
-      {fase.tipo === "prezzo" && (
-        <form
-          className="animate-in fade-in-0 slide-in-from-top-2 flex flex-col gap-3 rounded-2xl border-2 border-primary/25 bg-card p-4 shadow-md duration-200"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            const prezzo = Number(formData.get("prezzo"));
-            if (!Number.isInteger(prezzo) || prezzo < 0) return;
-            confermaPrezzo(prezzo);
-          }}
-        >
-          <span className="text-xs font-semibold text-primary">Passo 2/3 · Prezzo</span>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "rounded px-1.5 py-0.5 text-center font-mono text-xs font-semibold",
-                RUOLO_CLASSI[fase.giocatore.ruolo].badge,
-              )}
-            >
-              {fase.giocatore.ruolo}
-            </span>
-            <ClubBadge squadra={fase.giocatore.squadra} size="sm" />
-            <span className="flex-1 truncate font-semibold">{fase.giocatore.nome}</span>
-            <span className="text-xs text-muted-foreground">Qt. {fase.giocatore.quotazioneAttuale}</span>
-          </div>
-          {prezzoReattivoPerId.has(fase.giocatore.id) && (
-            <p className="text-xs text-muted-foreground">
-              Prezzo massimo reattivo consigliato:{" "}
-              <span className="font-mono font-semibold text-primary">{prezzoReattivoPerId.get(fase.giocatore.id)}</span>
-            </p>
-          )}
-          <div className="flex items-center gap-2">
-            <Input ref={prezzoRef} name="prezzo" type="number" min={0} step={1} placeholder="Prezzo" className="flex-1" required />
-            <Button type="submit">Continua</Button>
-            <Button type="button" variant="outline" onClick={tornaAllaLista}>
-              Annulla
-            </Button>
-          </div>
-        </form>
-      )}
-
-      {fase.tipo === "squadra" && (
-        <div className="animate-in fade-in-0 slide-in-from-top-2 flex flex-col gap-3 rounded-2xl border-2 border-primary/25 bg-card p-4 shadow-md duration-200">
-          <span className="text-xs font-semibold text-primary">Passo 3/3 · Squadra</span>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "rounded px-1.5 py-0.5 text-center font-mono text-xs font-semibold",
-                RUOLO_CLASSI[fase.giocatore.ruolo].badge,
-              )}
-            >
-              {fase.giocatore.ruolo}
-            </span>
-            <ClubBadge squadra={fase.giocatore.squadra} size="sm" />
-            <span className="flex-1 truncate font-semibold">{fase.giocatore.nome}</span>
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-sm font-bold text-primary">{fase.prezzo}</span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Clicca la colonna della squadra qui sotto, o <kbd className="rounded border border-border px-1 font-mono text-xs">Esc</kbd> per
-            annullare.
-          </p>
-          <Button type="button" variant="outline" onClick={tornaAllaLista} className="self-start">
-            Annulla
-          </Button>
-        </div>
-      )}
-
       {/* Squadre: contenuto centrale della pagina, sempre visibile. */}
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-foreground">Squadre</h2>
-        <TeamsGrid
-          squadre={squadreDerivate}
-          rose={rose}
-          eleggibilita={eleggibilita}
-          onAssegnaSquadra={assegnaASquadra}
-          flashTeamId={flashTeamId}
-        />
+        <TeamsGrid squadre={squadreDerivate} rose={rose} flashTeamId={flashTeamId} />
       </div>
 
       <div className="flex flex-col gap-2">

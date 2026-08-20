@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ListChecks, Terminal } from "lucide-react";
 import { getAliases, getAsteIndex, getListone, getListoneIndex, getStats, getStatsIndex } from "@/lib/blob/repository";
 import { CodaRevisione, type RigaDaRivedere } from "@/components/statistiche/coda-revisione";
@@ -97,11 +96,9 @@ export default async function StatistichePage({ searchParams }: PageProps<"/impo
       )}
 
       <p className="text-sm text-muted-foreground">
-        Statistiche a posto? Il passo successivo è{" "}
-        <Link href={`/impostazioni/dossier?stagione=${stagione}`} className="underline">
-          generare i dossier giocatori
-        </Link>
-        .
+        Statistiche a posto? I dossier giocatore si generano dal tab{" "}
+        <span className="font-medium text-foreground">IA</span> di un&apos;asta di questa stagione, insieme alle altre
+        funzioni del Ponte manuale.
       </p>
     </div>
   );

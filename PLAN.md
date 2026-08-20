@@ -131,7 +131,7 @@ Blob è **backup e sync tra dispositivi**, non la fonte di verità durante l'ast
 
 Il cuore dell'app. Layout denso, tutto raggiungibile da tastiera.
 
-- **Barra comando** (shadcn `Command`): cerco il giocatore con match fuzzy, digito il prezzo, scelgo la squadra, `Invio`. Nessun uso del mouse richiesto.
+- **Pannello di assegnazione unico**: scelto il giocatore, prezzo e squadra si decidono nella stessa schermata. Il prezzo arriva già proposto al massimo reattivo, con stepper e scorciatoie (quotazione, max, +1/+5/+10); le squadre sono tessere grandi con crediti residui, slot del ruolo in gioco e massima offerta, e un click assegna. Due click in tutto, nessuna digitazione obbligatoria. Su desktop anche da tastiera: `↑`/`↓` regolano il prezzo, `1-9` scelgono la squadra, `Esc` annulla.
 - **Pannello sinistro — giocatori liberi**: filtro per ruolo/squadra/fascia, con il *mio* prezzo max, la fascia e le stat chiave in colonna. Gli assegnati spariscono automaticamente.
 - **Pannello destro — griglia squadre**, per ognuna:
   - crediti residui (può andare in negativo in modalità sforo)
@@ -140,6 +140,7 @@ Il cuore dell'app. Layout denso, tutto raggiungibile da tastiera.
   - **sforo corrente in crediti e in euro** (solo in modalità sforo — vedi sotto)
   - alert quando un avversario è **obbligato** a comprare un ruolo (slot residui = giocatori liberi necessari)
 - **Prezzo reattivo**: il mio prezzo max si ricalcola dinamicamente sull'inflazione corrente della lega. Due formule, a seconda del regolamento (vedi § Modalità sforo).
+- **Striscia consiglio** sul giocatore corrente, in due metà: il verdetto su di lui (`punta` / `occasione` / `limite` / `lascia`) e su quale reparto conviene concentrarsi dato ciò che si è già comprato. È **deterministica** — `src/lib/asta/consiglio.ts`, nessuna chiamata IA e nessun ciclo copia-incolla: gli ingressi (obiettivi di slot, prezzi massimi, budget per reparto, slot e crediti residui, inflazione) sono già tutti in memoria nel tracker. Il dossier generato dall'hub IA, se c'è, aggiunge i segnali di rischio (titolarità, infortuni) ma non è un prerequisito. La precedenza è quella dei vincoli veri: slot pieno e crediti insufficienti battono sempre "però era un obiettivo", perché quel giocatore non lo si può comprare comunque
 - **Log eventi** con undo e modifica di qualsiasi assegnazione passata
 - **Rose avversarie** in tab dedicate, con spesa per reparto
 
@@ -313,6 +314,7 @@ Due strade, entrambe valide:
 ### Implementazione
 
 - Nessuna dipendenza da `@anthropic-ai/sdk`, nessuna `ANTHROPIC_API_KEY`, nessun contatore di spesa: **le fasi 0–7b non richiedono un account API**. L'SDK entra solo se attivi l'analisi live (fase 8).
+- `src/components/ai/ponte-ia.tsx` — il ciclo *genera prompt → copia → incolla → valida → applica*, scritto una volta sola e riusato dai quattro tab dell'hub `/asta/[id]/ai`. Due varianti: `PonteIA` valida con uno schema zod, `PonteIATesto` accetta prosa (debrief) o delega la validazione alla server action (analisi live)
 - `src/lib/ai/schemas.ts` — schemi zod, unica fonte di verità per validazione *e* generazione del JSON Schema nel prompt
 - `src/lib/ai/prompts/` — template dei prompt, uno per funzione, con i placeholder riempiti dai dati reali
 - Ogni pagina di generazione: bottone **Copia prompt**, textarea **Incolla risposta**, esito di validazione con errore puntuale
@@ -375,16 +377,20 @@ src/
   app/
     (app)/page.tsx                  home: indice delle sezioni
     (app)/asta/[id]/page.tsx        ← schermata critica
+    (app)/asta/[id]/listone/page.tsx
+    (app)/asta/[id]/strategia/page.tsx
+    (app)/asta/[id]/ai/page.tsx     ← hub IA: strategia, dossier, analisi live, debrief
+    (app)/asta/[id]/riepilogo/page.tsx
+    (app)/asta/importa/page.tsx     import di un'asta giocata altrove
     (app)/listone/page.tsx
-    (app)/strategia/[id]/page.tsx
-    (app)/strategia/[id]/genera/page.tsx   copia prompt / incolla risposta
-    (app)/riepilogo/[id]/page.tsx
     (app)/impostazioni/listone/page.tsx
     api/aste/[id]/board/route.ts    POST event log (ifMatch + merge su 412)
     api/listone/import/route.ts     upload + parse + versioning
     api/cron/stats/route.ts         trigger scraping
     api/ai/decisione/route.ts       fase 10 opzionale — analisi live
+  components/ai/                  ponte-ia (ciclo copia/incolla/valida) + i 4 tab dell'hub
   lib/
+    asta/consiglio.ts               ← verdetto sul giocatore + reparto prioritario, deterministico
     ai/schemas.ts                   ← schemi zod: validano E generano il JSON Schema del prompt
     ai/prompts/strategia.ts         template prompt + riempimento dai dati reali
     ai/prompts/dossier.ts           template + suddivisione in blocchi da 25

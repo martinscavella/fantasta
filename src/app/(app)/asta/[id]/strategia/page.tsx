@@ -5,7 +5,7 @@ import { applicaTemplate } from "@/lib/strategia/template";
 import { StrategiaClient } from "@/components/strategia/strategia-client";
 import type { StrategyDoc } from "@/lib/blob/schemas";
 
-export default async function StrategiaPage({ params }: PageProps<"/strategia/[id]">) {
+export default async function StrategiaPage({ params }: PageProps<"/asta/[id]/strategia">) {
   const { id } = await params;
   const setup = await getSetup(id);
   if (!setup) notFound();

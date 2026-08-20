@@ -11,11 +11,15 @@ export function AstaSubNav({ astaId, nome }: { astaId: string; nome: string }) {
   const tabs = [
     { href: `/asta/${astaId}`, label: "Tracker", icon: Gavel, attiva: pathname === `/asta/${astaId}` },
     { href: `/asta/${astaId}/listone`, label: "Listone", icon: Table2, attiva: pathname.startsWith(`/asta/${astaId}/listone`) },
-    { href: `/asta/${astaId}/analisi-live`, label: "Analisi live", icon: Sparkles, attiva: pathname.startsWith(`/asta/${astaId}/analisi-live`) },
-    { href: `/strategia/${astaId}`, label: "Strategia", icon: Target, attiva: pathname.startsWith(`/strategia/${astaId}`) },
-    { href: `/riepilogo/${astaId}`, label: "Riepilogo", icon: TrendingUp, attiva: pathname.startsWith(`/riepilogo/${astaId}`) },
-    { href: `/asta/${astaId}/impostazioni`, label: "Impostazioni", icon: Settings, attiva: pathname.startsWith(`/asta/${astaId}/impostazioni`) },
+    { href: `/asta/${astaId}/strategia`, label: "Strategia", icon: Target, attiva: pathname.startsWith(`/asta/${astaId}/strategia`) },
+    { href: `/asta/${astaId}/ai`, label: "IA", icon: Sparkles, attiva: pathname.startsWith(`/asta/${astaId}/ai`) },
+    { href: `/asta/${astaId}/riepilogo`, label: "Riepilogo", icon: TrendingUp, attiva: pathname.startsWith(`/asta/${astaId}/riepilogo`) },
   ];
+
+  // Le impostazioni non sono un passo del flusso come gli altri tab: stanno a
+  // parte come icona, per non rubare spazio alle cinque voci che si usano davvero.
+  const impostazioniHref = `/asta/${astaId}/impostazioni`;
+  const impostazioniAttiva = pathname.startsWith(impostazioniHref);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -30,7 +34,7 @@ export function AstaSubNav({ astaId, nome }: { astaId: string; nome: string }) {
         <span className="text-muted-foreground">/</span>
         <span className="truncate font-semibold">{nome}</span>
       </div>
-      <nav className="flex flex-wrap gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
+      <nav className="flex flex-wrap items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
         {tabs.map((tab) => (
           <Link
             key={tab.href}
@@ -46,6 +50,20 @@ export function AstaSubNav({ astaId, nome }: { astaId: string; nome: string }) {
             {tab.label}
           </Link>
         ))}
+        <span className="mx-0.5 h-4 w-px bg-border" />
+        <Link
+          href={impostazioniHref}
+          title="Impostazioni asta"
+          aria-label="Impostazioni asta"
+          className={cn(
+            "flex items-center rounded-full p-1.5 transition-colors",
+            impostazioniAttiva
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+          )}
+        >
+          <Settings className="size-3.5" />
+        </Link>
       </nav>
     </div>
   );

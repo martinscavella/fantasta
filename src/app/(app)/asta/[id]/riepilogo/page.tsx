@@ -5,7 +5,7 @@ import { costruisciRose, derivaSquadre } from "@/lib/asta/derive";
 import { RiepilogoClient } from "@/components/riepilogo/riepilogo-client";
 import type { Ruolo } from "@/lib/blob/schemas";
 
-export default async function RiepilogoPage({ params }: PageProps<"/riepilogo/[id]">) {
+export default async function RiepilogoPage({ params }: PageProps<"/asta/[id]/riepilogo">) {
   const { id } = await params;
   const setup = await getSetup(id);
   if (!setup) notFound();

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { Download, MessageSquare, TrendingUp, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { TeamsGrid } from "@/components/asta/teams-grid";
 import { AstaSubNav } from "@/components/asta/asta-sub-nav";
 import { AiCallout } from "@/components/shared/ai-callout";
@@ -14,8 +12,6 @@ import { RUOLO_CLASSI } from "@/lib/ruoli";
 import type { RigaRosa, StatoSquadraDerivato } from "@/lib/asta/derive";
 import { scostamentoStrategia, spesaPerRuolo } from "@/lib/riepilogo/scostamento";
 import { esportaAstaJson, esportaRosaCsv, scaricaFile } from "@/lib/riepilogo/export";
-import { buildPromptDebrief } from "@/lib/ai/prompts/debrief";
-import { salvaDebrief } from "@/lib/actions/debrief";
 import type { SetupDoc, StrategyDoc } from "@/lib/blob/schemas";
 
 // Solo lo sforamento (speso più del pianificato) è un segnale d'attenzione:
@@ -44,30 +40,6 @@ export function RiepilogoClient({
   const spesaEffettiva = spesaPerRuolo(rosaMia);
   const scostamento = strategy ? scostamentoStrategia(strategy.budgetReparto, spesaEffettiva) : null;
   const spesaTotale = rosaMia.reduce((tot, r) => tot + r.price, 0);
-
-  const [prompt, setPrompt] = useState<string | null>(null);
-  const [copiato, setCopiato] = useState(false);
-  const [debriefTesto, setDebriefTesto] = useState(debriefIniziale);
-  const [pending, setPending] = useState(false);
-  const [salvato, setSalvato] = useState(true);
-
-  function generaPromptDebrief() {
-    setPrompt(buildPromptDebrief(setup.nome, rosaMia, strategy));
-    setCopiato(false);
-  }
-
-  async function copiaPrompt() {
-    if (!prompt) return;
-    await navigator.clipboard.writeText(prompt);
-    setCopiato(true);
-  }
-
-  async function salva() {
-    setPending(true);
-    const esito = await salvaDebrief(setup.id, debriefTesto);
-    setPending(false);
-    if (esito.ok) setSalvato(true);
-  }
 
   return (
     <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -172,54 +144,22 @@ export function RiepilogoClient({
 
         <SectionCard
           title="Debrief IA"
-          description="Genera il prompt, incollalo in una chat Claude e riporta qui la risposta in prosa — non serve nessuna validazione, è solo testo da leggere."
+          description="La valutazione della rosa a bocce ferme si genera dal tab IA, insieme alle altre funzioni del Ponte manuale."
           icon={MessageSquare}
         >
-          {salvato && debriefTesto ? (
-            <AiCallout
-              label="Debrief salvato"
-              testo={debriefTesto}
-              actions={
-                <Button type="button" size="xs" variant="outline" onClick={() => setSalvato(false)}>
-                  Modifica
-                </Button>
-              }
-            />
+          {debriefIniziale ? (
+            <AiCallout label="Debrief salvato" testo={debriefIniziale} />
           ) : (
-            <div className="flex flex-col gap-3">
-              {!prompt && (
-                <Button type="button" size="sm" className="w-fit" onClick={generaPromptDebrief}>
-                  Genera prompt
-                </Button>
-              )}
-              {prompt && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Prompt</span>
-                    <Button type="button" size="xs" variant="outline" onClick={() => void copiaPrompt()}>
-                      {copiato ? "Copiato" : "Copia prompt"}
-                    </Button>
-                  </div>
-                  <Textarea readOnly value={prompt} rows={8} className="max-h-72 overflow-y-auto font-mono text-xs" />
-                </div>
-              )}
-              <Textarea
-                placeholder="Incolla qui il debrief…"
-                rows={8}
-                className="max-h-96 overflow-y-auto text-[0.95rem] leading-relaxed"
-                value={debriefTesto}
-                onChange={(e) => {
-                  setDebriefTesto(e.target.value);
-                  setSalvato(false);
-                }}
-              />
-              <div className="flex items-center gap-2">
-                <Button type="button" size="sm" onClick={() => void salva()} disabled={pending || salvato}>
-                  {pending ? "Salvataggio…" : "Salva debrief"}
-                </Button>
-                {salvato && debriefTesto && <Badge variant="secondary">salvato</Badge>}
-              </div>
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={<Link href={`/asta/${setup.id}/ai`} />}
+            >
+              <MessageSquare />
+              Genera il debrief
+            </Button>
           )}
         </SectionCard>
       </div>

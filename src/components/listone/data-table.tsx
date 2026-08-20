@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   columnSizingFeature,
@@ -13,9 +13,11 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
-import { Columns3 } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Columns3, Rows3, SearchX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -24,10 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ClubBadge } from "@/components/shared/club-badge";
-import { RUOLO_CLASSI } from "@/lib/ruoli";
+import { RUOLI, RUOLO_CLASSI, RUOLO_LABEL } from "@/lib/ruoli";
 import { cn } from "@/lib/utils";
 import { FASCIA_BADGE_VARIANT, type FasciaStandard } from "@/lib/pricing";
-import type { Player, PlayerStats, Ruolo } from "@/lib/blob/schemas";
+import type { Player, PlayerStats } from "@/lib/blob/schemas";
 
 export type RigaListone = Player & {
   fascia: FasciaStandard | null;
@@ -48,19 +50,30 @@ const features = tableFeatures({
 
 const helper = createColumnHelper<typeof features, RigaListone>();
 
+// I numeri vanno sempre in font-mono e allineati a destra (DESIGN-SYSTEM.md:
+// "font-mono — sempre, ovunque appaia un valore numerico"): una classe sola,
+// applicata da meta, invece di ripeterla su ogni colonna.
+type MetaColonna = { numerica?: boolean };
+
+function celleNumeriche(valore: number | undefined, decimali = 0): string {
+  if (valore === undefined) return "—";
+  return decimali > 0 ? valore.toFixed(decimali) : String(valore);
+}
+
 const colonneDati = helper.columns([
   helper.accessor("nome", {
     header: "Nome",
     size: 240,
     sortFn: "alphanumeric",
+    enableHiding: false,
     cell: (ctx) => {
       const assegnazione = ctx.row.original.assegnazione;
       return (
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className={cn("truncate", assegnazione && "text-muted-foreground line-through")}>{ctx.getValue()}</span>
+          <span className={cn("truncate", assegnazione && "text-muted-foreground")}>{ctx.getValue()}</span>
           {assegnazione && (
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground no-underline">
-              {assegnazione.teamNome} · {assegnazione.price}
+            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {assegnazione.teamNome} · <span className="font-mono">{assegnazione.price}</span>
             </span>
           )}
         </span>
@@ -103,18 +116,48 @@ const colonneDati = helper.columns([
       return fascia ? <Badge variant={FASCIA_BADGE_VARIANT[fascia]}>{fascia}</Badge> : null;
     },
   }),
-  helper.accessor("quotazioneAttuale", { header: "Qt.A", size: 80, sortFn: "basic" }),
-  helper.accessor("quotazioneIniziale", { header: "Qt.I", size: 80, sortFn: "basic" }),
-  helper.accessor("differenza", { header: "Diff.", size: 80, sortFn: "basic", sortUndefined: "last" }),
-  helper.accessor("fvm", { header: "FVM", size: 80, sortFn: "basic", sortUndefined: "last" }),
-  helper.accessor("fvmMantra", { header: "FVM M", size: 90, sortFn: "basic", sortUndefined: "last" }),
+  helper.accessor("quotazioneAttuale", { header: "Qt.A", size: 80, sortFn: "basic", meta: { numerica: true } }),
+  helper.accessor("quotazioneIniziale", { header: "Qt.I", size: 80, sortFn: "basic", meta: { numerica: true } }),
+  helper.accessor("differenza", {
+    header: "Diff.",
+    size: 80,
+    sortFn: "basic",
+    sortUndefined: "last",
+    meta: { numerica: true },
+    // Il segno è l'informazione: una quotazione in salita e una in discesa
+    // devono distinguersi a colpo d'occhio, non leggendo il numero.
+    cell: (ctx) => {
+      const v = ctx.getValue();
+      if (v === undefined) return "—";
+      return (
+        <span
+          className={cn(
+            v > 0 && "text-emerald-600 dark:text-emerald-400",
+            v < 0 && "text-rose-600 dark:text-rose-400",
+          )}
+        >
+          {v > 0 ? "+" : ""}
+          {v}
+        </span>
+      );
+    },
+  }),
+  helper.accessor("fvm", { header: "FVM", size: 80, sortFn: "basic", sortUndefined: "last", meta: { numerica: true } }),
+  helper.accessor("fvmMantra", {
+    header: "FVM M",
+    size: 90,
+    sortFn: "basic",
+    sortUndefined: "last",
+    meta: { numerica: true },
+  }),
   helper.accessor((row) => row.stats?.mediaVoto, {
     id: "mediaVoto",
     header: "MV",
     size: 70,
     sortFn: "basic",
     sortUndefined: "last",
-    cell: (ctx) => ctx.getValue()?.toFixed(2) ?? "—",
+    meta: { numerica: true },
+    cell: (ctx) => celleNumeriche(ctx.getValue(), 2),
   }),
   helper.accessor((row) => row.stats?.fantamedia, {
     id: "fantamedia",
@@ -122,7 +165,8 @@ const colonneDati = helper.columns([
     size: 70,
     sortFn: "basic",
     sortUndefined: "last",
-    cell: (ctx) => ctx.getValue()?.toFixed(2) ?? "—",
+    meta: { numerica: true },
+    cell: (ctx) => celleNumeriche(ctx.getValue(), 2),
   }),
   helper.accessor((row) => row.stats?.presenze, {
     id: "presenze",
@@ -130,7 +174,8 @@ const colonneDati = helper.columns([
     size: 70,
     sortFn: "basic",
     sortUndefined: "last",
-    cell: (ctx) => ctx.getValue() ?? "—",
+    meta: { numerica: true },
+    cell: (ctx) => celleNumeriche(ctx.getValue()),
   }),
   helper.accessor((row) => row.stats?.gol, {
     id: "gol",
@@ -138,7 +183,8 @@ const colonneDati = helper.columns([
     size: 60,
     sortFn: "basic",
     sortUndefined: "last",
-    cell: (ctx) => ctx.getValue() ?? "—",
+    meta: { numerica: true },
+    cell: (ctx) => celleNumeriche(ctx.getValue()),
   }),
   helper.accessor((row) => row.stats?.assist, {
     id: "assist",
@@ -146,15 +192,22 @@ const colonneDati = helper.columns([
     size: 60,
     sortFn: "basic",
     sortUndefined: "last",
-    cell: (ctx) => ctx.getValue() ?? "—",
+    meta: { numerica: true },
+    cell: (ctx) => celleNumeriche(ctx.getValue()),
   }),
 ]);
 
-const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
 const FASCE: FasciaStandard[] = ["Top", "Semitop", "Terza fascia", "Scommesse"];
 const TUTTI = "_tutti";
-const ROW_HEIGHT = 36;
 export const MAX_CONFRONTO = 4;
+
+type Densita = "compatta" | "normale";
+const ALTEZZA_RIGA: Record<Densita, number> = { compatta: 32, normale: 40 };
+const CHIAVE_DENSITA = "fantasta:listone:densita";
+
+// Larghezza delle due colonne bloccate a sinistra (checkbox confronto + nome):
+// scorrendo in orizzontale si perdeva di vista di chi fosse la riga.
+const LARGHEZZA_CONFRONTO = 32;
 
 export function ListoneDataTable({
   giocatori,
@@ -171,14 +224,28 @@ export function ListoneDataTable({
   const [ruolo, setRuolo] = useState<string>(TUTTI);
   const [fascia, setFascia] = useState<string>(TUTTI);
   const [nascondiAssegnati, setNascondiAssegnati] = useState(false);
+  const [densita, setDensita] = useState<Densita>("normale");
   const haAssegnazioni = useMemo(() => giocatori.some((g) => g.assegnazione), [giocatori]);
+
+  // La preferenza di densità si legge in un effetto, non durante il render:
+  // localStorage non esiste sul server e ESLint vieta setState sincrono negli
+  // effetti solo quando dipende da props/stato — qui è un caricamento una tantum.
+  useEffect(() => {
+    const salvata = window.localStorage.getItem(CHIAVE_DENSITA);
+    if (salvata === "compatta" || salvata === "normale") setDensita(salvata);
+  }, []);
+
+  function cambiaDensita(prossima: Densita) {
+    setDensita(prossima);
+    window.localStorage.setItem(CHIAVE_DENSITA, prossima);
+  }
 
   const columns = useMemo(
     () => [
       helper.display({
         id: "confronto",
         header: "",
-        size: 32,
+        size: LARGHEZZA_CONFRONTO,
         enableHiding: false,
         enableSorting: false,
         cell: (ctx) => {
@@ -227,48 +294,75 @@ export function ListoneDataTable({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const rows = table.getRowModel().rows;
+  const altezzaRiga = ALTEZZA_RIGA[densita];
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => altezzaRiga,
     getItemKey: (index) => rows[index].id,
     overscan: 10,
   });
 
-  const colonneVisibili = table.getAllLeafColumns().filter((c) => c.getCanHide());
+  const colonneNascondibili = table.getAllLeafColumns().filter((c) => c.getCanHide());
+  const nascoste = colonneNascondibili.filter((c) => !c.getIsVisible()).length;
+
+  // Offset sinistro delle colonne bloccate: la checkbox parte da 0, il nome
+  // subito dopo. Serve a entrambe le righe (intestazione e corpo).
+  function stickyProps(columnId: string, indice: number): { className: string; style: React.CSSProperties } | null {
+    if (columnId === "confronto") return { className: "sticky left-0 z-20", style: { left: 0 } };
+    if (columnId === "nome" && indice === 1) {
+      return { className: "sticky z-20", style: { left: LARGHEZZA_CONFRONTO } };
+    }
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
+      {/* Barra filtri: una riga sola, stessi gesti del tracker per il ruolo. */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-2.5 shadow-sm">
         <Input
           placeholder="Cerca nome o squadra…"
           value={ricerca}
           onChange={(e) => setRicerca(e.target.value)}
-          className="w-56"
+          className="w-52"
         />
-        <Select
-          value={ruolo}
-          onValueChange={(v) => setRuolo(v ?? TUTTI)}
-          items={{ [TUTTI]: "Tutti i ruoli", ...Object.fromEntries(RUOLI.map((r) => [r, r])) }}
-        >
-          <SelectTrigger size="sm">
-            <SelectValue placeholder="Ruolo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={TUTTI}>Tutti i ruoli</SelectItem>
-            {RUOLI.map((r) => (
-              <SelectItem key={r} value={r}>
-                {r}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => setRuolo(TUTTI)}
+            className={cn(
+              "flex h-8 items-center rounded-full border px-2.5 text-xs font-medium transition-colors",
+              ruolo === TUTTI
+                ? "border-transparent bg-foreground text-background"
+                : "border-border text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Tutti
+          </button>
+          {RUOLI.map((r) => (
+            <button
+              key={r}
+              type="button"
+              title={RUOLO_LABEL[r]}
+              aria-label={RUOLO_LABEL[r]}
+              onClick={() => setRuolo(r)}
+              className={cn(
+                "flex size-8 items-center justify-center rounded-full border font-mono text-xs font-semibold transition-colors active:scale-90",
+                ruolo === r ? cn(RUOLO_CLASSI[r].solid, "border-transparent") : cn("border-border", RUOLO_CLASSI[r].badge),
+              )}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+
         <Select
           value={fascia}
           onValueChange={(v) => setFascia(v ?? TUTTI)}
           items={{ [TUTTI]: "Tutte le fasce", ...Object.fromEntries(FASCE.map((f) => [f, f])) }}
         >
-          <SelectTrigger size="sm">
+          <SelectTrigger size="sm" className="w-36">
             <SelectValue placeholder="Fascia" />
           </SelectTrigger>
           <SelectContent>
@@ -280,8 +374,9 @@ export function ListoneDataTable({
             ))}
           </SelectContent>
         </Select>
+
         {haAssegnazioni && (
-          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <label className="flex h-8 items-center gap-1.5 text-sm text-muted-foreground">
             <input
               type="checkbox"
               checked={nascondiAssegnati}
@@ -291,82 +386,172 @@ export function ListoneDataTable({
             Nascondi assegnati
           </label>
         )}
-        <span className="text-sm text-muted-foreground">{data.length} giocatori</span>
-      </div>
 
-      <p className="text-xs text-muted-foreground">
-        Clicca una riga per aprire la scheda giocatore · spunta la casella a sinistra per aggiungerlo al confronto (fino a {MAX_CONFRONTO}).
-      </p>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            <span className="font-mono font-semibold text-foreground">{data.length}</span> giocatori
+          </span>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-        <span className="flex items-center gap-1.5 font-medium text-foreground">
-          <Columns3 className="size-3.5" />
-          Colonne
-        </span>
-        {colonneVisibili.map((column) => (
-          <label key={column.id} className="flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={column.getIsVisible()}
-              onChange={column.getToggleVisibilityHandler()}
-              className="size-4 rounded border-input accent-primary"
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => cambiaDensita(densita === "compatta" ? "normale" : "compatta")}
+            title={densita === "compatta" ? "Righe normali" : "Righe compatte"}
+          >
+            <Rows3 />
+            {densita === "compatta" ? "Compatta" : "Normale"}
+          </Button>
+
+          {/* Le 14 checkbox di colonna occupavano una riga intera sopra i dati:
+              qui stanno dentro un popover e il conteggio dice cosa è nascosto. */}
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button type="button" variant="outline" size="sm">
+                  <Columns3 />
+                  Colonne
+                  {nascoste > 0 && <Badge variant="secondary">{nascoste} nascoste</Badge>}
+                </Button>
+              }
             />
-            {String(column.columnDef.header)}
-          </label>
-        ))}
+            <PopoverContent align="end" className="w-52">
+              <div className="flex flex-col">
+                {colonneNascondibili.map((column) => (
+                  <label
+                    key={column.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={column.getIsVisible()}
+                      onChange={column.getToggleVisibilityHandler()}
+                      className="size-4 rounded border-input accent-primary"
+                    />
+                    {String(column.columnDef.header)}
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
-      <div ref={scrollRef} className="max-h-[70vh] overflow-auto rounded-2xl border border-border bg-card shadow-sm">
+      <div
+        ref={scrollRef}
+        className="max-h-[70vh] overflow-auto rounded-2xl border border-border bg-card shadow-sm"
+      >
         <div style={{ width: table.getTotalSize() }}>
-          <div className="sticky top-0 z-10 flex border-b border-border bg-muted/60 backdrop-blur-sm">
-            {table.getFlatHeaders().map((header) => (
-              <div
-                key={header.id}
-                style={{ width: header.getSize() }}
-                className="flex shrink-0 cursor-pointer items-center gap-1 px-2 py-2 text-left text-sm font-semibold select-none hover:text-primary"
-                onClick={header.column.getToggleSortingHandler()}
-              >
-                <table.FlexRender header={header} />
-                {{ asc: " ↑", desc: " ↓" }[header.column.getIsSorted() as string] ?? ""}
-              </div>
-            ))}
-          </div>
-          <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-            {virtualizer.getVirtualItems().map((item) => {
-              const row = rows[item.index];
+          <div className="sticky top-0 z-30 flex border-b border-border bg-muted/95 backdrop-blur-sm">
+            {table.getFlatHeaders().map((header, indice) => {
+              const sticky = stickyProps(header.column.id, indice);
+              const ordinata = header.column.getIsSorted() as "asc" | "desc" | false;
+              // -1 quando la colonna non partecipa all'ordinamento; >0 solo se
+              // ci sono piu' colonne ordinate insieme, ed e' li' che l'indice serve.
+              const posizione = header.column.getSortIndex();
+              const numerica = (header.column.columnDef.meta as MetaColonna | undefined)?.numerica;
+
               return (
                 <div
-                  key={row.id}
-                  data-index={item.index}
+                  key={header.id}
+                  style={{ width: header.getSize(), ...sticky?.style }}
                   className={cn(
-                    "flex cursor-pointer border-b border-border/60 transition-colors hover:bg-accent/40",
-                    row.original.assegnazione && "opacity-50 hover:opacity-100",
+                    "group/header relative flex shrink-0 items-center gap-1 px-2 py-2 text-sm font-semibold select-none",
+                    numerica && "justify-end",
+                    header.column.getCanSort() && "cursor-pointer hover:text-primary",
+                    sticky?.className,
+                    sticky && "bg-muted/95",
                   )}
-                  onClick={() => onApriScheda(row.original.id)}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: ROW_HEIGHT,
-                    transform: `translateY(${item.start}px)`,
-                  }}
+                  onClick={header.column.getToggleSortingHandler()}
+                  title={header.column.getCanSort() ? "Clicca per ordinare · Shift+clic per ordinamento multiplo" : undefined}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <div
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      className="flex shrink-0 items-center px-2 text-sm"
-                    >
-                      <table.FlexRender cell={cell} />
-                    </div>
-                  ))}
+                  <table.FlexRender header={header} />
+                  {header.column.getCanSort() && (
+                    <span className="flex shrink-0 items-center">
+                      {ordinata === "asc" ? (
+                        <ChevronUp className="size-3.5" />
+                      ) : ordinata === "desc" ? (
+                        <ChevronDown className="size-3.5" />
+                      ) : (
+                        <ChevronsUpDown className="size-3.5 text-muted-foreground/40 opacity-0 transition-opacity group-hover/header:opacity-100" />
+                      )}
+                      {/* Con più colonne ordinate insieme, l'indice dice quale
+                          conta per prima: enableMultiSort era già attivo ma invisibile. */}
+                      {posizione > 0 && (
+                        <span className="font-mono text-[10px] text-muted-foreground">{posizione + 1}</span>
+                      )}
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
+
+          {rows.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 p-10 text-center text-sm text-muted-foreground">
+              <SearchX className="size-6" />
+              Nessun giocatore con questi filtri.
+            </div>
+          ) : (
+            <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+              {virtualizer.getVirtualItems().map((item) => {
+                const row = rows[item.index];
+                const assegnato = Boolean(row.original.assegnazione);
+                return (
+                  <div
+                    key={row.id}
+                    data-index={item.index}
+                    className={cn(
+                      "group/riga flex cursor-pointer border-b border-border/60 transition-colors",
+                      item.index % 2 === 1 && "bg-muted/25",
+                      "hover:bg-accent/50",
+                      // Bordo accento invece di opacity sull'intera riga: a fine
+                      // asta metà tabella è assegnata, e sbiadirla la rende illeggibile.
+                      assegnato && "border-l-2 border-l-muted-foreground/40",
+                    )}
+                    onClick={() => onApriScheda(row.original.id)}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: altezzaRiga,
+                      transform: `translateY(${item.start}px)`,
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell, indice) => {
+                      const sticky = stickyProps(cell.column.id, indice);
+                      const numerica = (cell.column.columnDef.meta as MetaColonna | undefined)?.numerica;
+                      return (
+                        <div
+                          key={cell.id}
+                          style={{ width: cell.column.getSize(), ...sticky?.style }}
+                          className={cn(
+                            "flex shrink-0 items-center px-2 text-sm",
+                            numerica && "justify-end font-mono",
+                            sticky?.className,
+                            // Le celle bloccate hanno bisogno di uno sfondo proprio,
+                            // o il contenuto che scorre sotto resta visibile.
+                            sticky && (item.index % 2 === 1 ? "bg-card" : "bg-card"),
+                            sticky && "group-hover/riga:bg-accent/50",
+                          )}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        Clicca una riga per la scheda giocatore · casella a sinistra per il confronto (max {MAX_CONFRONTO}) ·
+        Shift+clic su un&apos;intestazione per ordinare su più colonne.
+      </p>
     </div>
   );
 }

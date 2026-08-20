@@ -64,8 +64,22 @@ le rose, `TrendingUp` per gli scostamenti.
 
 ## Dove si applica (stato attuale)
 
-Applicato a Strategia, Riepilogo e Analisi live (le pagine esplicitamente
-segnalate come da sistemare). `TeamsGrid` e la home page erano già coerenti e
-sono rimaste il riferimento. Le pagine di importazione/impostazioni e il
-Listone non sono ancora state riviste — stessa convenzione da applicare quando
-si torna a toccarle.
+Applicato a Strategia, Riepilogo, hub IA, Tracker e Listone. `TeamsGrid` e la
+home page erano già coerenti e sono rimaste il riferimento. Restano da rivedere
+le pagine di importazione e impostazioni.
+
+Due componenti aggiunti nel giro di semplificazione UX, entrambi riusabili:
+
+- **`Stepper`** (`components/shared/`) — barra dei passi per i wizard di
+  import, condivisa tra listone e rose.
+- **`Popover`** (`components/ui/`) — wrapper su Base UI con le stesse
+  convenzioni di `select.tsx`/`dialog.tsx`. Nato per il selettore di colonne
+  del Listone: quattordici checkbox in fila rubavano una riga intera sopra i
+  dati.
+
+Nella tabella del Listone valgono anche: colonne numeriche allineate a destra
+in `font-mono` (la regola generale, qui applicata via `meta.numerica`), nome e
+casella di confronto bloccati a sinistra durante lo scorrimento orizzontale, e
+righe assegnate marcate da un bordo accento invece che da `opacity` sull'intera
+riga — a fine asta metà tabella è assegnata, e sbiadirla la renderebbe
+illeggibile.

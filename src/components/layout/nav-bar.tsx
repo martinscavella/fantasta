@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { usePathname } from "next/navigation";
-import { BarChart3, ChevronDown, FileText, FileUp, Gavel, Settings, Table2, Upload } from "lucide-react";
+import { BarChart3, ChevronDown, FileUp, Gavel, Settings, Table2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const VOCI = [
@@ -20,7 +20,6 @@ const IMPOSTAZIONI = [
   { href: "/impostazioni/listone", label: "Importa listone", desc: "Carica il file ufficiale o Fanta Club", icon: Upload },
   { href: "/asta/importa", label: "Importa asta conclusa", desc: "Rose e prezzi da un file per fantaleghe", icon: FileUp },
   { href: "/impostazioni/statistiche", label: "Statistiche", desc: "Stato scraping e coda di revisione nomi", icon: BarChart3 },
-  { href: "/impostazioni/dossier", label: "Dossier", desc: "Schede giocatore via IA, ponte manuale", icon: FileText },
 ] as const;
 
 function NavLink({ href, label, icon: Icon, attiva }: { href: string; label: string; icon: typeof Gavel; attiva: boolean }) {

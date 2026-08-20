@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, FileText, FileUp, Gavel, Table2, Upload, type LucideIcon } from "lucide-react";
+import { BarChart3, FileUp, Gavel, Table2, Upload, type LucideIcon } from "lucide-react";
 
 // Dentro il route group (app) per ereditare l'header con la nav. Nessuna
 // lettura da Blob: la home deve restare raggiungibile anche quando lo store
@@ -34,12 +34,6 @@ const SEZIONI: { href: string; titolo: string; descrizione: string; icon: Lucide
     titolo: "Statistiche",
     descrizione: "Stato dello scraping e coda di revisione dei nomi non abbinati.",
     icon: BarChart3,
-  },
-  {
-    href: "/impostazioni/dossier",
-    titolo: "Dossier",
-    descrizione: "Genera i prompt a blocchi e importa i dossier giocatore.",
-    icon: FileText,
   },
 ];
 

@@ -110,7 +110,7 @@ export function ImportaRoseClient({
         setErrore(body.error ?? "Errore durante l'import");
         return;
       }
-      if (mode === "commit" && body.astaId) router.push(`/riepilogo/${body.astaId}`);
+      if (mode === "commit" && body.astaId) router.push(`/asta/${body.astaId}/riepilogo`);
     } catch {
       setErrore("Richiesta fallita: controlla la connessione e riprova");
     } finally {

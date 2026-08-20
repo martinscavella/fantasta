@@ -59,7 +59,7 @@ export function StrategiaClient({
         description="Fasce, budget per reparto, obiettivi di slot e prezzi massimi — tutto ciò che prepari prima dell'asta."
         actions={
           <>
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/strategia/${setup.id}/genera`} />}>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/asta/${setup.id}/ai`} />}>
               <Sparkles />
               Genera con IA
             </Button>
