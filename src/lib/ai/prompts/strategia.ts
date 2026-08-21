@@ -10,12 +10,16 @@ import type { Player, SetupDoc } from "@/lib/blob/schemas";
 
 export type OpzioneScelta = { id: string; label: string; descrizione?: string };
 
+// Nessuno stile propone piu' "il blocco della stessa big": prendere mezza rosa
+// da un solo club e' rischio correlato (una domenica storta, un cambio di
+// allenatore, il turnover delle coppe affondano tutto insieme). La
+// diversificazione e' una regola del prompt, non una preferenza da spuntare.
 export const STILI: OpzioneScelta[] = [
-  { id: "corazzata-difensiva", label: "Corazzata difensiva", descrizione: "difesa e portiere della stessa big" },
+  { id: "corazzata-difensiva", label: "Corazzata difensiva", descrizione: "portiere e difensori titolari di squadre che subiscono poco" },
   { id: "attacco-stellare", label: "Attacco stellare", descrizione: "uno o due bomber da top di listone" },
   { id: "budget-diffuso", label: "Budget diffuso", descrizione: "nessun big, tanti titolari di fascia media" },
   { id: "centrocampo-dominante", label: "Centrocampo dominante", descrizione: "spesa concentrata sui centrocampisti da bonus" },
-  { id: "coppia-gol", label: "Coppia gol della stessa squadra", descrizione: "due attaccanti dello stesso club" },
+  { id: "doppia-punta", label: "Doppia punta di peso", descrizione: "due attaccanti da bonus, meglio se di club diversi" },
   { id: "portiere-titolare-big", label: "Portiere titolare di una big", descrizione: "invece di risparmiare sul reparto" },
 ];
 
@@ -41,7 +45,6 @@ export const PREFERENZE: OpzioneScelta[] = [
   { id: "evita-trasferiti", label: "Evita chi ha appena cambiato squadra" },
   { id: "giovani", label: "Punta sui giovani in crescita" },
   { id: "titolarita-su-talento", label: "Preferisci la titolarità certa al talento discontinuo" },
-  { id: "max-due-per-club", label: "Non più di due giocatori dello stesso club" },
   { id: "evita-coppe", label: "Occhio a chi gioca le coppe europee (turnover)" },
 ];
 
@@ -90,9 +93,16 @@ export function buildPromptStrategia(setup: SetupDoc, giocatori: Player[], input
 
   const rischio = RISCHI.find((r) => r.id === input.rischio);
 
-  return `Sei un assistente per la preparazione di un'asta del fantacalcio (Serie A, modalità Classic — solo ruoli P/D/C/A).
+  return `Sei il mio collega d'asta per il fantacalcio (Serie A, modalità Classic — solo ruoli P/D/C/A). Prepariamo insieme il piano con cui mi siedo al tavolo.
 
-Fai ricerca sul web per informarti sullo stato attuale della Serie A (mercato estivo, infortuni, cambi di allenatore, gerarchie nei rigori) prima di rispondere: la strategia deve riflettere la stagione in corso, non dati generici.
+Fai ricerca sul web sullo stato attuale della Serie A (mercato estivo, infortuni, cambi di allenatore, gerarchie nei rigori) prima di rispondere: il piano deve riflettere la stagione in corso, non dati generici.
+
+## Come ragionare
+- L'asta si gioca con altre persone, che hanno i loro piani e i loro crediti. Il mio piano non sopravviverà intatto, ed è normale: costruiscilo perché regga quando le cose vanno diversamente, non perché sia perfetto sulla carta.
+- Per ogni slot conta più la profondità delle alternative che il nome dell'obiettivo principale. Se il primo salta a un prezzo fuori scala devo già sapere chi prendere al suo posto e a quanto.
+- La ripartizione del budget è una bussola, non un vincolo contabile. Dimmi quali numeri sono davvero intoccabili e quali possono muoversi — e a scapito di quale reparto — se l'asta si scalda da una parte.
+- Diversifica i club: più di due giocatori dello stesso club è rischio correlato — una brutta domenica di quella squadra, un cambio di allenatore o il turnover delle coppe affondano mezza rosa in una volta. Tre dello stesso club solo con una ragione forte e dichiarata; il reparto difensivo tutto della stessa squadra non è un piano, è una scommessa singola travestita da rosa, e vale anche col modificatore di difesa attivo.
+- I prezzi vanno espressi nella scala di QUESTA lega (budget ${setup.creditiBase} a squadra): se la quotazione di listino è tarata su un'altra scala, riportala prima di usarla.
 
 ## Regole della lega
 - Squadre partecipanti: ${setup.squadre.length}
@@ -122,11 +132,13 @@ ${listaGiocatori}
 Costruisci una strategia d'asta completa e motivata:
 1. Soglie delle fasce di prezzo, calibrate su questo budget (non la convenzione generica).
 2. Ripartizione del budget per reparto (P/D/C/A) in crediti, che deve sommare esattamente a ${setup.creditiBase}.
-3. Obiettivi primari e alternative ordinate per ogni slot (usa gli id dei giocatori elencati sopra).
+3. Obiettivi primari e alternative ordinate per ogni slot (usa gli id dei giocatori elencati sopra). Le alternative sono la parte che userò davvero: almeno due per ogni slot che conta, su fasce di prezzo diverse, e non tutte dello stesso club dell'obiettivo principale.
 4. Prezzo massimo consigliato per i giocatori più rilevanti (usa i loro id).
-5. Una sintesi in prosa: cosa stiamo facendo e perché, incluse le scelte che discendono dalle preferenze qui sopra.
+5. Una sintesi in prosa: cosa stiamo facendo e perché, quali scelte discendono dalle preferenze qui sopra, e i due o tre bivi in cui mi troverò con ogni probabilità — un reparto che va a prezzi folli, un obiettivo che sparisce nei primi giri — con la mossa da fare in ciascuno.
 
-Rispondi SOLO con un blocco JSON conforme a questo schema (nessun testo dopo il blocco):
+Prima del blocco JSON puoi scrivermi qualche riga di commento: dove il piano è fragile, cosa cambieresti, cosa ti convince poco dei parametri che ti ho dato. L'app le ignora e importa solo il JSON, quindi non costano nulla — e se preferisci discutere una scelta prima di produrre il piano, chiedimelo invece di indovinare.
+
+Il JSON dev'essere l'unico blocco di codice della risposta, conforme a questo schema:
 
 \`\`\`json
 ${JSON.stringify(z.toJSONSchema(StrategiaGeneratasSchema), null, 2)}
